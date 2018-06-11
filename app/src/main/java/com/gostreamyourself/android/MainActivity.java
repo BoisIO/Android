@@ -44,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.main_recycler) RecyclerView recyclerView;
     @BindView(R.id.main_startSwitch) Switch startSwitch;
     @BindView(R.id.main_cameraSwitch) Switch cameraSwitch;
+    @BindView(R.id.testButton) Button testButton;
 
     private CameraManager cameraManager;
     private int cameraFacing;
@@ -119,6 +120,19 @@ public class MainActivity extends AppCompatActivity {
 
         final ArrayList<Message> msgs = new ArrayList<Message>();
 
+        testButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Message test = new Message();
+                test.setMessage("Dit is een bericht dat door een random gebruiker is gestuurd en deze wordt in de applicatie getoond.");
+                msgs.add(test);
+
+                recyclerView.getAdapter().notifyDataSetChanged();
+                recyclerView.scrollToPosition(recyclerView.getAdapter().getItemCount() - 1);
+
+            }
+        });
+
         for (int i = 0; i < 100; i++) {
             Message test = new Message();
             test.setMessage("Message: " + i);
@@ -143,17 +157,22 @@ public class MainActivity extends AppCompatActivity {
         cameraSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                if(b){
-                    Toast.makeText(MainActivity.this, "Switched to Front Facing", Toast.LENGTH_SHORT).show();
-                } else{
+                closeCamera();
+
+                if(cameraFacing == CameraCharacteristics.LENS_FACING_FRONT){
+                    cameraFacing = CameraCharacteristics.LENS_FACING_BACK;
                     Toast.makeText(MainActivity.this, "Switch to Back Facing", Toast.LENGTH_SHORT).show();
+                } else if(cameraFacing == CameraCharacteristics.LENS_FACING_BACK){
+                    cameraFacing = CameraCharacteristics.LENS_FACING_FRONT;
+                    Toast.makeText(MainActivity.this, "Switch to Front Facing", Toast.LENGTH_SHORT).show();
                 }
+
+                setUpCamera();
+                openCamera();
+
+
             }
         });
-
-
-
-        //recyclerView.scrollToPosition(recyclerView.getAdapter().getItemCount() - 1);
 
         MessageListAdapter adapter = new MessageListAdapter(this, msgs);
         recyclerView.setAdapter(adapter);
