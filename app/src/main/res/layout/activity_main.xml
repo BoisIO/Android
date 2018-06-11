@@ -11,14 +11,40 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <android.support.design.widget.FloatingActionButton
-        android:id="@+id/main_switch"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="24dp"
-        app:backgroundTint="@color/colorPrimary" />
+    <ImageView
+        android:id="@+id/main_viewerImage"
+        android:layout_width="25dp"
+        android:layout_height="20dp"
+        android:background="@drawable/users"
+        android:layout_marginLeft="5dp"/>
+    <TextView
+        android:id="@+id/main_viewerCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="100"
+        android:layout_marginLeft="5dp"
+        android:layout_marginTop="2dp"
+        android:layout_toRightOf="@id/main_viewerImage"/>
 
+    <Switch
+        android:id="@+id/main_startSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:theme="@style/SwitchTheme"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentTop="true"/>
+
+    <Switch
+        android:id="@+id/main_cameraSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toLeftOf="@id/main_startSwitch"
+        android:layout_marginRight="10dp"/>
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/main_recycler"
+        android:layout_width="match_parent"
+        android:layout_height="250dp"
+        android:layout_alignParentBottom="true"></android.support.v7.widget.RecyclerView>
 
 </RelativeLayout>

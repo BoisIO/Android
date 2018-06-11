@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Camera;
+import android.graphics.Color;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -19,13 +20,20 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.Switch;
+import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.Collections;
 
 import butterknife.BindView;
@@ -33,7 +41,9 @@ import butterknife.ButterKnife;
 
 public class MainActivity extends AppCompatActivity {
     @BindView(R.id.main_textureView) TextureView textureView;
-    @BindView(R.id.main_switch) FloatingActionButton fab;
+    @BindView(R.id.main_recycler) RecyclerView recyclerView;
+    @BindView(R.id.main_startSwitch) Switch startSwitch;
+    @BindView(R.id.main_cameraSwitch) Switch cameraSwitch;
 
     private CameraManager cameraManager;
     private int cameraFacing;
@@ -107,21 +117,51 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        fab.setOnClickListener(new View.OnClickListener() {
+        final ArrayList<Message> msgs = new ArrayList<Message>();
+
+        for (int i = 0; i < 100; i++) {
+            Message test = new Message();
+            test.setMessage("Message: " + i);
+            if(i == 43){
+                test.setMessage("DIT IS EEN FUCKING LANG BERICHT OM TE TESTEN OF DE APPLICATIE DIT ONDERSTEUNT");
+            }
+            Log.i("YOLO", "onCreate: Created Message: " + i);
+            msgs.add(test);
+        }
+
+        startSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
-            public void onClick(View view) {
-                closeCamera();
-
-                if(cameraFacing == CameraCharacteristics.LENS_FACING_FRONT){
-                    cameraFacing = CameraCharacteristics.LENS_FACING_BACK;
-                } else if(cameraFacing == CameraCharacteristics.LENS_FACING_BACK){
-                    cameraFacing = CameraCharacteristics.LENS_FACING_FRONT;
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                if(b){
+                    Toast.makeText(MainActivity.this, "Turned stream on", Toast.LENGTH_SHORT).show();
+                } else{
+                    Toast.makeText(MainActivity.this, "Turned stream off", Toast.LENGTH_SHORT).show();
                 }
-
-                setUpCamera();
-                openCamera();
             }
         });
+
+        cameraSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                if(b){
+                    Toast.makeText(MainActivity.this, "Switched to Front Facing", Toast.LENGTH_SHORT).show();
+                } else{
+                    Toast.makeText(MainActivity.this, "Switch to Back Facing", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+
+
+        //recyclerView.scrollToPosition(recyclerView.getAdapter().getItemCount() - 1);
+
+        MessageListAdapter adapter = new MessageListAdapter(this, msgs);
+        recyclerView.setAdapter(adapter);
+
+        LinearLayoutManager layoutManager = new LinearLayoutManager(MainActivity.this);
+        //layoutManager.setReverseLayout(true);
+        layoutManager.setStackFromEnd(true);
+        recyclerView.setLayoutManager(layoutManager);
 
     }
 
