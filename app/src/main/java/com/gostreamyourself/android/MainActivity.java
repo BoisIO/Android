@@ -14,6 +14,8 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.design.widget.FloatingActionButton;
@@ -25,22 +27,29 @@ import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
+import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.Toast;
 
+import com.pedro.encoder.input.video.CameraOpenException;
+import com.pedro.rtplibrary.rtsp.RtspCamera1;
+import com.pedro.rtsp.utils.ConnectCheckerRtsp;
+
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class MainActivity extends AppCompatActivity {
-    @BindView(R.id.main_textureView) TextureView textureView;
+public class MainActivity extends AppCompatActivity implements ConnectCheckerRtsp, View.OnClickListener, SurfaceHolder.Callback{
+    @BindView(R.id.main_surfaceView) SurfaceView surfaceView;
     @BindView(R.id.main_recycler) RecyclerView recyclerView;
     @BindView(R.id.main_startSwitch) Switch startSwitch;
     @BindView(R.id.main_cameraSwitch) Switch cameraSwitch;
@@ -55,9 +64,17 @@ public class MainActivity extends AppCompatActivity {
     private CaptureRequest.Builder captureRequestBuilder;
     private CaptureRequest captureRequest;
 
+
+    private File folder = new File(Environment.getExternalStorageDirectory().getAbsolutePath()
+            + "/rtmp-rtsp-stream-client-java");
+
     private CameraDevice.StateCallback stateCallback;
     private HandlerThread backgroundThread;
     private Handler backgroundHandler;
+
+    private String URL;
+
+    private RtspCamera1 rtspCamera1;
 
     private String cameraID;
     Size previewSize;
@@ -71,52 +88,13 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_REQUEST_CODE);
-        cameraManager = (CameraManager) this.getSystemService(Context.CAMERA_SERVICE);
-        cameraFacing = CameraCharacteristics.LENS_FACING_BACK;
 
-        textureListener = new TextureView.SurfaceTextureListener() {
-            @Override
-            public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i1) {
-                setUpCamera();
-                openCamera();
-            }
+        URL = "rtsp://145.49.8.130:80/live/STREAM";
 
-            @Override
-            public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int i, int i1) {
-
-            }
-
-            @Override
-            public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
-                return false;
-            }
-
-            @Override
-            public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
-
-            }
-        };
-
-        stateCallback = new CameraDevice.StateCallback() {
-            @Override
-            public void onOpened(CameraDevice cameraDevice) {
-                MainActivity.this.cameraDevice = cameraDevice;
-                createPreviewSession();
-            }
-
-            @Override
-            public void onDisconnected(CameraDevice cameraDevice) {
-                cameraDevice.close();
-                MainActivity.this.cameraDevice = null;
-            }
-
-            @Override
-            public void onError(CameraDevice cameraDevice, int error) {
-                cameraDevice.close();
-                MainActivity.this.cameraDevice = null;
-            }
-        };
+        rtspCamera1 = new RtspCamera1(surfaceView, this);
+        surfaceView.getHolder().addCallback(this);
 
         final ArrayList<Message> msgs = new ArrayList<Message>();
 
@@ -146,31 +124,34 @@ public class MainActivity extends AppCompatActivity {
         startSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                if(b){
+                if (b) {
                     Toast.makeText(MainActivity.this, "Turned stream on", Toast.LENGTH_SHORT).show();
-                } else{
-                    Toast.makeText(MainActivity.this, "Turned stream off", Toast.LENGTH_SHORT).show();
+                    if (!rtspCamera1.isStreaming()) {
+                        if (rtspCamera1.isRecording() || rtspCamera1.prepareAudio() && rtspCamera1.prepareVideo()) {
+                            rtspCamera1.startStream(URL);
+                        } else {
+                            Toast.makeText(MainActivity.this, "Error preparing stream, This device cant do it",
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        Toast.makeText(MainActivity.this, "Turned stream off", Toast.LENGTH_SHORT).show();
+
+                        rtspCamera1.stopStream();
+                    }
                 }
             }
         });
 
+
+
         cameraSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                closeCamera();
-
-                if(cameraFacing == CameraCharacteristics.LENS_FACING_FRONT){
-                    cameraFacing = CameraCharacteristics.LENS_FACING_BACK;
-                    Toast.makeText(MainActivity.this, "Switch to Back Facing", Toast.LENGTH_SHORT).show();
-                } else if(cameraFacing == CameraCharacteristics.LENS_FACING_BACK){
-                    cameraFacing = CameraCharacteristics.LENS_FACING_FRONT;
-                    Toast.makeText(MainActivity.this, "Switch to Front Facing", Toast.LENGTH_SHORT).show();
-                }
-
-                setUpCamera();
-                openCamera();
-
-
+                    try {
+                        rtspCamera1.switchCamera();
+                    } catch (CameraOpenException e) {
+                        Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
             }
         });
 
@@ -184,112 +165,81 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        openBackgroundThread();
-        if (textureView.isAvailable()) {
-            setUpCamera();
-            openCamera();
-        } else {
-            textureView.setSurfaceTextureListener(textureListener);
-        }
-    }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-        closeCamera();
-        closeBackgroundThread();
-    }
-
-    private void closeCamera() {
-        if (cameraCaptureSession != null) {
-            cameraCaptureSession.close();
-            cameraCaptureSession = null;
-        }
-
-        if (cameraDevice != null) {
-            cameraDevice.close();
-            cameraDevice = null;
-        }
-    }
-
-    private void closeBackgroundThread() {
-        if (backgroundHandler != null) {
-            backgroundThread.quitSafely();
-            backgroundThread = null;
-            backgroundHandler = null;
-        }
-    }
-
-    private void createPreviewSession() {
-        try {
-            SurfaceTexture surfaceTexture = textureView.getSurfaceTexture();
-            surfaceTexture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
-            Surface previewSurface = new Surface(surfaceTexture);
-            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            captureRequestBuilder.addTarget(previewSurface);
-
-            cameraDevice.createCaptureSession(Collections.singletonList(previewSurface),
-                    new CameraCaptureSession.StateCallback() {
-
-                        @Override
-                        public void onConfigured(CameraCaptureSession cameraCaptureSession) {
-                            if (cameraDevice == null) {
-                                return;
-                            }
-
-                            try {
-                                captureRequest = captureRequestBuilder.build();
-                                MainActivity.this.cameraCaptureSession = cameraCaptureSession;
-                                MainActivity.this.cameraCaptureSession.setRepeatingRequest(captureRequest,
-                                        null, backgroundHandler);
-                            } catch (CameraAccessException e) {
-                                e.printStackTrace();
-                            }
-                        }
-
-                        @Override
-                        public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
-
-                        }
-                    }, backgroundHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void setUpCamera(){
-        try{
-            for (String cameraID : cameraManager.getCameraIdList()){
-                CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraID);
-                if(cameraCharacteristics.get(CameraCharacteristics.LENS_FACING) == cameraFacing){
-                    StreamConfigurationMap streamConfigurationMap = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-                    previewSize = streamConfigurationMap.getOutputSizes(SurfaceTexture.class)[0];
-                    this.cameraID = cameraID;
-                }
+    public void onConnectionSuccessRtsp() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Connection success", Toast.LENGTH_SHORT).show();
             }
-        } catch(CameraAccessException e){
-            e.printStackTrace();
-        }
+        });
     }
 
-    private void openCamera() {
-        try {
-            if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA)
-                    == PackageManager.PERMISSION_GRANTED) {
-                cameraManager.openCamera(cameraID, stateCallback, backgroundHandler);
+
+    @Override
+    public void onConnectionFailedRtsp(final String reason) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_LONG)
+                        .show();
+                rtspCamera1.stopStream();
+                //button.setText(R.string.start_button);
             }
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
+        });
     }
 
-    private void openBackgroundThread() {
-        backgroundThread = new HandlerThread("camera_background_thread");
-        backgroundThread.start();
-        backgroundHandler = new Handler(backgroundThread.getLooper());
+    @Override
+    public void onDisconnectRtsp() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Disconnected", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
+    @Override
+    public void onAuthErrorRtsp() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Auth error", Toast.LENGTH_SHORT).show();
+                rtspCamera1.stopStream();
+                //button.setText(R.string.start_button);
+            }
+        });
+    }
+
+    @Override
+    public void onAuthSuccessRtsp() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Auth success", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    @Override
+    public void surfaceCreated(SurfaceHolder surfaceHolder) {
+
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+        rtspCamera1.startPreview();
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+        rtspCamera1.stopPreview();
+    }
+
+
+    @Override
+    public void onClick(View view) {
+
+    }
 }
