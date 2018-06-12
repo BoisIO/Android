@@ -6,6 +6,17 @@
     android:layout_height="match_parent"
     tools:context="com.gostreamyourself.android.LoginActivity">
 
+
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="100dp"
+        android:layout_marginLeft="100dp"
+        android:layout_above="@id/login_loginButton"
+        android:hint="Username"
+        android:textAlignment="center"/>
+
     <Button
         android:id="@+id/login_loginButton"
         android:layout_width="wrap_content"
