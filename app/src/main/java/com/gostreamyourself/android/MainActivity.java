@@ -53,7 +53,7 @@ import java.util.Collections;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class MainActivity extends AppCompatActivity implements ConnectCheckerRtmp, View.OnClickListener, SurfaceHolder.Callback{
+public class MainActivity extends AppCompatActivity implements ConnectCheckerRtsp, View.OnClickListener, SurfaceHolder.Callback{
     @BindView(R.id.main_surfaceView) SurfaceView surfaceView;
     @BindView(R.id.main_recycler) RecyclerView recyclerView;
     @BindView(R.id.main_startSwitch) Switch startSwitch;
@@ -79,7 +79,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRtm
 
     private String URL;
 
-    private RtmpCamera2 rtspCamera2;
+    private RtspCamera2 rtspCamera2;
 
     private String cameraID;
     Size previewSize;
@@ -96,9 +96,9 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRtm
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_REQUEST_CODE);
 
-        URL = "rtmp://145.49.24.137/live/stream";
+        URL = "rtsp://145.49.24.137/live/stream";
 
-        rtspCamera2 = new RtmpCamera2(surfaceView, this);
+        rtspCamera2 = new RtspCamera2(surfaceView, this);
 
         surfaceView.getHolder().addCallback(this);
 
@@ -174,61 +174,61 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRtm
     }
 
 
-    //@Override
-    //public void onConnectionSuccessRtsp() {
-    //    runOnUiThread(new Runnable() {
-    //        @Override
-    //        public void run() {
-    //            Toast.makeText(MainActivity.this, "Connection success", Toast.LENGTH_SHORT).show();
-    //        }
-    //    });
-    //}
-//
-//
-    //@Override
-    //public void onConnectionFailedRtsp(final String reason) {
-    //    runOnUiThread(new Runnable() {
-    //        @Override
-    //        public void run() {
-    //            Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_LONG)
-    //                    .show();
-    //            rtspCamera2.stopStream();
-    //            //button.setText(R.string.start_button);
-    //        }
-    //    });
-    //}
-//
-    //@Override
-    //public void onDisconnectRtsp() {
-    //    runOnUiThread(new Runnable() {
-    //        @Override
-    //        public void run() {
-    //            Toast.makeText(MainActivity.this, "Disconnected", Toast.LENGTH_SHORT).show();
-    //        }
-    //    });
-    //}
-//
-    //@Override
-    //public void onAuthErrorRtsp() {
-    //    runOnUiThread(new Runnable() {
-    //        @Override
-    //        public void run() {
-    //            Toast.makeText(MainActivity.this, "Auth error", Toast.LENGTH_SHORT).show();
-    //            rtspCamera2.stopStream();
-    //            //button.setText(R.string.start_button);
-    //        }
-    //    });
-    //}
-//
-    //@Override
-    //public void onAuthSuccessRtsp() {
-    //    runOnUiThread(new Runnable() {
-    //        @Override
-    //        public void run() {
-    //            Toast.makeText(MainActivity.this, "Auth success", Toast.LENGTH_SHORT).show();
-    //        }
-    //    });
-    //}
+    @Override
+    public void onConnectionSuccessRtsp() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Connection success", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+
+    @Override
+    public void onConnectionFailedRtsp(final String reason) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_LONG)
+                        .show();
+                rtspCamera2.stopStream();
+                //button.setText(R.string.start_button);
+            }
+        });
+    }
+
+    @Override
+    public void onDisconnectRtsp() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Disconnected", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    @Override
+    public void onAuthErrorRtsp() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Auth error", Toast.LENGTH_SHORT).show();
+                rtspCamera2.stopStream();
+                //button.setText(R.string.start_button);
+            }
+        });
+    }
+
+    @Override
+    public void onAuthSuccessRtsp() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Auth success", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
 
     @Override
     public void surfaceCreated(SurfaceHolder surfaceHolder) {
@@ -251,60 +251,60 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRtm
 
     }
 
-    @Override
-    public void onConnectionSuccessRtmp() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(MainActivity.this, "Connection success", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    @Override
-    public void onConnectionFailedRtmp(final String reason) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_SHORT)
-                        .show();
-                rtspCamera2.stopStream();
-            }
-        });
-    }
-
-    @Override
-    public void onDisconnectRtmp() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(MainActivity.this, "Disconnected", Toast.LENGTH_SHORT).show();
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
-                        && rtspCamera2.isRecording()) {
-                    rtspCamera2.stopRecord();
-                }
-            }
-        });
-    }
-
-    @Override
-    public void onAuthErrorRtmp() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(MainActivity.this, "Auth error", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    @Override
-    public void onAuthSuccessRtmp() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(MainActivity.this, "Auth success", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
+    //@Override
+    //public void onConnectionSuccessRtmp() {
+    //    runOnUiThread(new Runnable() {
+    //        @Override
+    //        public void run() {
+    //            Toast.makeText(MainActivity.this, "Connection success", Toast.LENGTH_SHORT).show();
+    //        }
+    //    });
+    //}
+//
+    //@Override
+    //public void onConnectionFailedRtmp(final String reason) {
+    //    runOnUiThread(new Runnable() {
+    //        @Override
+    //        public void run() {
+    //            Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_SHORT)
+    //                    .show();
+    //            rtspCamera2.stopStream();
+    //        }
+    //    });
+    //}
+//
+    //@Override
+    //public void onDisconnectRtmp() {
+    //    runOnUiThread(new Runnable() {
+    //        @Override
+    //        public void run() {
+    //            Toast.makeText(MainActivity.this, "Disconnected", Toast.LENGTH_SHORT).show();
+    //            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
+    //                    && rtspCamera2.isRecording()) {
+    //                rtspCamera2.stopRecord();
+    //            }
+    //        }
+    //    });
+    //}
+//
+    //@Override
+    //public void onAuthErrorRtmp() {
+    //    runOnUiThread(new Runnable() {
+    //        @Override
+    //        public void run() {
+    //            Toast.makeText(MainActivity.this, "Auth error", Toast.LENGTH_SHORT).show();
+    //        }
+    //    });
+    //}
+//
+    //@Override
+    //public void onAuthSuccessRtmp() {
+    //    runOnUiThread(new Runnable() {
+    //        @Override
+    //        public void run() {
+    //            Toast.makeText(MainActivity.this, "Auth success", Toast.LENGTH_SHORT).show();
+    //        }
+    //    });
+    //}
 
 }
