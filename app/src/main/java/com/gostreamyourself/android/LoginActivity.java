@@ -74,7 +74,7 @@ public class LoginActivity extends AppCompatActivity {
 
     private File file;
     private String token;
-    private RSAPrivateKey privateKey;
+    private PrivateKey privateKey;
     private String url;
 
 
@@ -118,6 +118,8 @@ public class LoginActivity extends AppCompatActivity {
                                 dis.close();
                                 String temp = new String(keyBytes);
 
+                                Log.i("WATAS", "onSelectedFilePaths: " + temp);
+
                                 String privKeyPEM = temp.replace("-----BEGIN PRIVATE KEY-----", "");
                                 privKeyPEM = privKeyPEM.replace("-----END PRIVATE KEY-----", "");
 
@@ -139,14 +141,17 @@ public class LoginActivity extends AppCompatActivity {
                                                     token = result.headers.get("Token");
                                                     Log.i("Token", "onResponse: " + token);
                                                     MessageDigest digest = MessageDigest.getInstance("SHA-256");
-                                                    byte[] hash = digest.digest(token.getBytes("UTF8"));
-                                                    byte[] data = token.getBytes("UTF8");
+                                                    byte[] hash = digest.digest("{}".getBytes("UTF8"));
+                                                    byte[] data = "{}".getBytes();
 
                                                     Signature instance = Signature.getInstance("SHA256withRSA");
                                                     instance.initSign(privateKey);
-                                                    instance.update(hash);
+                                                    instance.update(data);
                                                     byte[] signatureBytes = instance.sign();
-                                                    instance.update(hash);
+
+                                                    Log.i("NDOE", "onResponse: " + signatureBytes.toString());
+
+                                                    instance.update(data);
 
                                                     final String encryptedToken = android.util.Base64.encodeToString(signatureBytes, android.util.Base64.DEFAULT);
 
@@ -155,13 +160,15 @@ public class LoginActivity extends AppCompatActivity {
                                                     byte[] bytes = encryptedToken.getBytes();
 
                                                     StringBuilder sb = new StringBuilder();
-                                                    for (int i=0; i<bytes.length; i++) {
-                                                        sb.append(String.format("%02X ",bytes[i]));
+                                                    for (int i=0; i<signatureBytes.length; i++) {
+                                                        sb.append(String.format("%02X ",signatureBytes[i]));
                                                     }
 
                                                     final String hexStringSpaces = sb.toString();
 
-                                                    final String hexString = hexStringSpaces.replace(" ", "");
+                                                    final String hexStringUpper = hexStringSpaces.replace(" ", "");
+
+                                                    final String hexString = hexStringUpper.toLowerCase();
 
                                                     Log.i("After hex", "onResponse: " + hexStringSpaces);
                                                     Log.i("Without spaces", "onResponse: " + hexString);
@@ -174,6 +181,7 @@ public class LoginActivity extends AppCompatActivity {
                                                                 public void onResponse(String response) {
                                                                     // response
                                                                     Log.d("Response", response);
+
                                                                 }
                                                             },
                                                             new Response.ErrorListener() {
@@ -215,10 +223,6 @@ public class LoginActivity extends AppCompatActivity {
 
                                 queue.add(stringRequest);
 
-
-
-
-
                             } catch (Exception e){
                                 e.printStackTrace();
                             }
@@ -232,18 +236,15 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    public static RSAPrivateKey loadPrivateKey(String stored) throws GeneralSecurityException, IOException
+    public static PrivateKey loadPrivateKey(String stored) throws GeneralSecurityException, IOException
     {
-        byte[] data = Base64.getMimeDecoder().decode((stored.getBytes()));
-        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(data);
-        KeyFactory kf = KeyFactory.getInstance("RSA");
-        return (RSAPrivateKey) kf.generatePrivate(spec);
-    }
+        byte [] pkcs8EncodedBytes = android.util.Base64.decode(stored, android.util.Base64.DEFAULT);
 
-    private static KeyPair getKeyPair() throws NoSuchAlgorithmException {
-        KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
-        kpg.initialize(1024);
-        return kpg.genKeyPair();
+        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(pkcs8EncodedBytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        PrivateKey privKey = kf.generatePrivate(keySpec);
+
+        return privKey;
     }
 
 }
