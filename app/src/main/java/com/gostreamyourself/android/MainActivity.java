@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         messageAdapter = new MessageAdapter(getApplicationContext(), messages);
 
         try {
-            socket = IO.socket("http://certifcation.herokuapp.com/login");
+            socket = IO.socket("http://noauthy.herokuapp.com/chat/5b2235eae7179a589281bbf5");
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
@@ -273,15 +273,15 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
     //}
 
     private void connectSocket() {
-        socket.on(Socket.EVENT_CONNECT,onConnect);
-        socket.on(Socket.EVENT_DISCONNECT,onDisconnect);
+        socket.on(Socket.EVENT_CONNECT, onConnect);
+        socket.on(Socket.EVENT_DISCONNECT, onDisconnect);
         socket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
         socket.on(Socket.EVENT_CONNECT_TIMEOUT, onConnectError);
         socket.on("new message", onNewMessage);
         socket.on("user joined", onUserJoined);
         socket.on("user left", onUserLeft);
-        socket.on("typing", onTyping);
-        socket.on("stop typing", onStopTyping);
+        //socket.on("typing", onTyping);
+        //1socket.on("stop typing", onStopTyping);
         socket.connect();
     }
 
@@ -292,10 +292,6 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 @Override
                 public void run() {
                     if(!isConnected) {
-                        if(null != username) {
-                            socket.emit("add user", username);
-                        }
-
                         Toast.makeText(getApplicationContext(), R.string.connect, Toast.LENGTH_LONG).show();
                         isConnected = true;
                     }
@@ -367,7 +363,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                     int numUsers;
 
                     try {
-                        username = data.getString("username");
+                        //username = data.getString("username");
                         numUsers = data.getInt("numUsers");
                     } catch (JSONException e) {
                         Log.e(TAG, e.getMessage());
@@ -392,7 +388,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                     int numUsers;
 
                     try {
-                        username = data.getString("username");
+                        //username = data.getString("username");
                         numUsers = data.getInt("numUsers");
                     } catch (JSONException e) {
                         Log.e(TAG, e.getMessage());
