@@ -13,6 +13,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.AuthFailureError;
@@ -69,6 +71,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class LoginActivity extends AppCompatActivity {
     @BindView(R.id.login_loginButton) Button loginBtn;
     @BindView(R.id.login_user) EditText userTxt;
+    @BindView(R.id.login_errorTxt) TextView errorTxt;
+    @BindView(R.id.login_progress) ProgressBar progressBar;
 
     private int PICKFILE_RESULT_CODE = 123;
 
@@ -106,6 +110,11 @@ public class LoginActivity extends AppCompatActivity {
                 dialog.setDialogSelectionListener(new DialogSelectionListener() {
                     @Override
                     public void onSelectedFilePaths(String[] files) {
+
+                        loginBtn.setVisibility(View.INVISIBLE);
+                        userTxt.setVisibility(View.INVISIBLE);
+                        progressBar.setVisibility(View.VISIBLE);
+
                         for(String path : files){
                             file = new File(path);
 
@@ -181,14 +190,21 @@ public class LoginActivity extends AppCompatActivity {
                                                                 public void onResponse(String response) {
                                                                     // response
                                                                     Log.d("Response", response);
-
+                                                                    errorTxt.setVisibility(View.INVISIBLE);
+                                                                    Intent gotoMain = new Intent(LoginActivity.this, MainActivity.class);
+                                                                    startActivity(gotoMain);
+                                                                    finish();
                                                                 }
                                                             },
                                                             new Response.ErrorListener() {
                                                                 @Override
                                                                 public void onErrorResponse(VolleyError error) {
                                                                     // TODO Auto-generated method stub
-                                                                    Log.d("ERROR", "error => " + error.toString());
+                                                                    Log.d("MANIZZLE", "error => " + error.toString());
+                                                                    progressBar.setVisibility(View.INVISIBLE);
+                                                                    errorTxt.setVisibility(View.VISIBLE);
+                                                                    loginBtn.setVisibility(View.VISIBLE);
+                                                                    userTxt.setVisibility(View.VISIBLE);
                                                                 }
                                                             }
                                                     ) {
@@ -217,6 +233,10 @@ public class LoginActivity extends AppCompatActivity {
                                             @Override
                                             public void onErrorResponse(VolleyError error) {
                                                 Toast.makeText(LoginActivity.this,error.toString(),Toast.LENGTH_LONG ).show();
+                                                progressBar.setVisibility(View.INVISIBLE);
+                                                errorTxt.setVisibility(View.VISIBLE);
+                                                loginBtn.setVisibility(View.VISIBLE);
+                                                userTxt.setVisibility(View.VISIBLE);
                                             }
                                         }) {
                                 };
@@ -246,5 +266,7 @@ public class LoginActivity extends AppCompatActivity {
 
         return privKey;
     }
+
+
 
 }

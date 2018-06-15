@@ -5,8 +5,23 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="com.gostreamyourself.android.LoginActivity">
+    
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/logo"
+        android:layout_above="@id/login_user"/>
 
 
+    <TextView
+        android:id="@+id/login_errorTxt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/login_loginButton"
+        android:text="Wrong username or key"
+        android:textColor="@color/red"
+        android:layout_centerHorizontal="true"
+        android:visibility="invisible"/>
 
     <EditText
         android:id="@+id/login_user"
@@ -24,6 +39,13 @@
         android:layout_height="wrap_content"
         android:text="Login"
         android:layout_centerInParent="true"/>
+
+    <ProgressBar
+        android:id="@+id/login_progress"
+        android:layout_centerInParent="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="invisible"/>
 
 
 </RelativeLayout>

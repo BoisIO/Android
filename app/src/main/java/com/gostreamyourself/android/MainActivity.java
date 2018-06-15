@@ -141,11 +141,11 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                             Toast.makeText(MainActivity.this, "Error preparing stream, This device cant do it",
                                     Toast.LENGTH_SHORT).show();
                         }
-                    } else {
-                        Toast.makeText(MainActivity.this, "Turned stream off", Toast.LENGTH_SHORT).show();
-
-                        rtspCamera2.stopStream();
                     }
+                } else {
+                    Toast.makeText(MainActivity.this, "Turned stream off", Toast.LENGTH_SHORT).show();
+
+                    rtspCamera2.stopStream();
                 }
             }
         });
