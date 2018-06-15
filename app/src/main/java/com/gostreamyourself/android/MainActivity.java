@@ -8,21 +8,19 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.CompoundButton;
-import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.pedro.encoder.input.video.CameraOpenException;
-import com.pedro.rtplibrary.rtsp.RtspCamera1;
+
+import com.pedro.rtplibrary.rtsp.RtspCamera2;
 import com.pedro.rtsp.utils.ConnectCheckerRtsp;
 
 import org.json.JSONException;
@@ -55,7 +53,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
     private List<Message> messages = new ArrayList<Message>();
     private RecyclerView.Adapter messageAdapter;
     private String URL;
-    private RtspCamera1 rtspCamera1;
+    private RtspCamera2 rtspCamera2;
 
     private static final int CAMERA_REQUEST_CODE = 1888;
     private static final int REQUEST_LOGIN = 0;
@@ -78,9 +76,10 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.CAMERA}, CAMERA_REQUEST_CODE);
 
-        URL = "rtsp://145.49.8.130:80/live/STREAM";
+        URL = "rtsp://145.49.24.137/live/stream";
 
-        rtspCamera1 = new RtspCamera1(surfaceView, this);
+        rtspCamera2 = new RtspCamera2(surfaceView, this);
+
         surfaceView.getHolder().addCallback(this);
         Random r = new Random();
         for (int i = 0; i < 100; i++) {
@@ -102,16 +101,19 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 if (b) {
                     Toast.makeText(MainActivity.this, "Turned stream on", Toast.LENGTH_SHORT).show();
+                    if (!rtspCamera2.isStreaming()) {
+                        if (rtspCamera2.isRecording() || rtspCamera2.prepareAudio() && rtspCamera2.prepareVideo()) {
 
-                    if (!rtspCamera1.isStreaming()) {
-                        if (rtspCamera1.isRecording() || rtspCamera1.prepareAudio() && rtspCamera1.prepareVideo()) {
-                            rtspCamera1.startStream(URL);
+                            Log.i("test", "onCheckedChanged: STARTING STREAM");
+                            rtspCamera2.startStream(URL);
                         } else {
-                            Toast.makeText(MainActivity.this, "Error preparing stream, This device cant do it", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MainActivity.this, "Error preparing stream, This device cant do it",
+                                    Toast.LENGTH_SHORT).show();
                         }
                     } else {
                         Toast.makeText(MainActivity.this, "Turned stream off", Toast.LENGTH_SHORT).show();
-                        rtspCamera1.stopStream();
+
+                        rtspCamera2.stopStream();
                     }
                 }
             }
@@ -121,7 +123,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 try {
-                    rtspCamera1.switchCamera();
+                    rtspCamera2.switchCamera();
                 } catch (CameraOpenException e) {
                     Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
@@ -135,19 +137,6 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         //layoutManager.setReverseLayout(true);
         layoutManager.setStackFromEnd(true);
         messagesView.setLayoutManager(layoutManager);
-    }
-
-    private void connectSocket() {
-        socket.on(Socket.EVENT_CONNECT,onConnect);
-        socket.on(Socket.EVENT_DISCONNECT,onDisconnect);
-        socket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
-        socket.on(Socket.EVENT_CONNECT_TIMEOUT, onConnectError);
-        socket.on("new message", onNewMessage);
-        socket.on("user joined", onUserJoined);
-        socket.on("user left", onUserLeft);
-        socket.on("typing", onTyping);
-        socket.on("stop typing", onStopTyping);
-        socket.connect();
     }
 
     @Override
@@ -168,7 +157,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
             public void run() {
                 Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_LONG)
                         .show();
-                rtspCamera1.stopStream();
+                rtspCamera2.stopStream();
                 //button.setText(R.string.start_button);
             }
         });
@@ -190,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
             @Override
             public void run() {
                 Toast.makeText(MainActivity.this, "Auth error", Toast.LENGTH_SHORT).show();
-                rtspCamera1.stopStream();
+                rtspCamera2.stopStream();
                 //button.setText(R.string.start_button);
             }
         });
@@ -213,18 +202,87 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
 
     @Override
     public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-        rtspCamera1.startPreview();
+        rtspCamera2.startPreview();
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-        rtspCamera1.stopPreview();
+        rtspCamera2.stopPreview();
     }
 
 
     @Override
     public void onClick(View view) {
 
+    }
+
+    //@Override
+    //public void onConnectionSuccessRtmp() {
+    //    runOnUiThread(new Runnable() {
+    //        @Override
+    //        public void run() {
+    //            Toast.makeText(MainActivity.this, "Connection success", Toast.LENGTH_SHORT).show();
+    //        }
+    //    });
+    //}
+//
+    //@Override
+    //public void onConnectionFailedRtmp(final String reason) {
+    //    runOnUiThread(new Runnable() {
+    //        @Override
+    //        public void run() {
+    //            Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_SHORT)
+    //                    .show();
+    //            rtspCamera2.stopStream();
+    //        }
+    //    });
+    //}
+//
+    //@Override
+    //public void onDisconnectRtmp() {
+    //    runOnUiThread(new Runnable() {
+    //        @Override
+    //        public void run() {
+    //            Toast.makeText(MainActivity.this, "Disconnected", Toast.LENGTH_SHORT).show();
+    //            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
+    //                    && rtspCamera2.isRecording()) {
+    //                rtspCamera2.stopRecord();
+    //            }
+    //        }
+    //    });
+    //}
+//
+    //@Override
+    //public void onAuthErrorRtmp() {
+    //    runOnUiThread(new Runnable() {
+    //        @Override
+    //        public void run() {
+    //            Toast.makeText(MainActivity.this, "Auth error", Toast.LENGTH_SHORT).show();
+    //        }
+    //    });
+    //}
+//
+    //@Override
+    //public void onAuthSuccessRtmp() {
+    //    runOnUiThread(new Runnable() {
+    //        @Override
+    //        public void run() {
+    //            Toast.makeText(MainActivity.this, "Auth success", Toast.LENGTH_SHORT).show();
+    //        }
+    //    });
+    //}
+
+    private void connectSocket() {
+        socket.on(Socket.EVENT_CONNECT,onConnect);
+        socket.on(Socket.EVENT_DISCONNECT,onDisconnect);
+        socket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
+        socket.on(Socket.EVENT_CONNECT_TIMEOUT, onConnectError);
+        socket.on("new message", onNewMessage);
+        socket.on("user joined", onUserJoined);
+        socket.on("user left", onUserLeft);
+        socket.on("typing", onTyping);
+        socket.on("stop typing", onStopTyping);
+        socket.connect();
     }
 
     private Emitter.Listener onConnect = new Emitter.Listener() {
