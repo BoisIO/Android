@@ -65,13 +65,19 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
         }
 
         public void setUsername(String username) {
-            if (null == usernameView) return;
+            if (null == usernameView) {
+                return;
+            }
+
             usernameView.setText(username);
             usernameView.setTextColor(getUsernameColor(username));
         }
 
         public void setMessage(String message) {
-            if (null == message) return;
+            if (null == message) {
+                return;
+            }
+
             messageView.setText(message);
         }
 
