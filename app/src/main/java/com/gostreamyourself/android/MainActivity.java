@@ -88,9 +88,6 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
 
         rtspCamera2 = new RtspCamera2(surfaceView, this);
 
-        rtspCamera2.prepareVideo(1920, 1080, 60, 1228800, true, 90);
-
-
         List<Size> test1 = rtspCamera2.getResolutionsBack();
 
         for(Size size : test1){
