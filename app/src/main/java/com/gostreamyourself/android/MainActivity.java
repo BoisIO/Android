@@ -1,130 +1,106 @@
 package com.gostreamyourself.android;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.graphics.Camera;
-import android.graphics.Color;
-import android.graphics.SurfaceTexture;
-import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraCaptureSession;
-import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.CameraDevice;
-import android.hardware.camera2.CameraManager;
-import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.params.StreamConfigurationMap;
-import android.os.Build;
-import android.os.Environment;
+import android.os.Bundle;
 import android.os.Handler;
-import android.os.HandlerThread;
-import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.util.Size;
-import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.TextureView;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.pedro.encoder.input.video.CameraOpenException;
-import com.pedro.rtplibrary.rtmp.RtmpCamera1;
-import com.pedro.rtplibrary.rtmp.RtmpCamera2;
-import com.pedro.rtplibrary.rtsp.RtspCamera1;
+
 import com.pedro.rtplibrary.rtsp.RtspCamera2;
 import com.pedro.rtsp.utils.ConnectCheckerRtsp;
 
-import net.ossrs.rtmp.ConnectCheckerRtmp;
+import org.json.JSONException;
+import org.json.JSONObject;
 
-import java.io.File;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.List;
+import java.util.Random;
+import java.net.*;
 
+import io.socket.client.IO;
+import io.socket.client.Socket;
+import io.socket.emitter.Emitter;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class MainActivity extends AppCompatActivity implements ConnectCheckerRtsp, View.OnClickListener, SurfaceHolder.Callback{
+public class MainActivity extends AppCompatActivity implements ConnectCheckerRtsp, View.OnClickListener, SurfaceHolder.Callback {
     @BindView(R.id.main_surfaceView) SurfaceView surfaceView;
-    @BindView(R.id.main_recycler) RecyclerView recyclerView;
+    @BindView(R.id.main_recycler) RecyclerView messagesView;
     @BindView(R.id.main_startSwitch) Switch startSwitch;
     @BindView(R.id.main_cameraSwitch) Switch cameraSwitch;
-    @BindView(R.id.testButton) Button testButton;
+    @BindView(R.id.main_viewerCount) TextView viewerCountTextView;
 
-    private CameraManager cameraManager;
-    private int cameraFacing;
-    private TextureView.SurfaceTextureListener textureListener;
-    private CameraDevice cameraDevice;
-
-    private CameraCaptureSession cameraCaptureSession;
-    private CaptureRequest.Builder captureRequestBuilder;
-    private CaptureRequest captureRequest;
-
-
-    private File folder = new File(Environment.getExternalStorageDirectory().getAbsolutePath()
-            + "/rtmp-rtsp-stream-client-java");
-
-    private CameraDevice.StateCallback stateCallback;
-    private HandlerThread backgroundThread;
-    private Handler backgroundHandler;
-
+    private static final String TAG = MainActivity.class.getSimpleName();
+    private Socket socket;
+    private Boolean isConnected = true;
+    private String username;
+    private boolean typing = false;
+    private Handler typingHandler = new Handler();
+    private List<Message> messages = new ArrayList<Message>();
+    private RecyclerView.Adapter messageAdapter;
     private String URL;
-
     private RtspCamera2 rtspCamera2;
 
-    private String cameraID;
-    Size previewSize;
-
     private static final int CAMERA_REQUEST_CODE = 1888;
-
+    private static final int REQUEST_LOGIN = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
+        messageAdapter = new MessageAdapter(getApplicationContext(), messages);
+
+        try {
+
+
+            String url = "http://back3ndb0is.herokuapp.com/chat/socket?";
+
+            IO.Options mOptions = new IO.Options();
+            mOptions.query = "stream=" + "5b20e0d7e7179a589280ca7f";
+            socket = IO.socket(url, mOptions);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+
+        connectSocket();
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_REQUEST_CODE);
+        ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.CAMERA}, CAMERA_REQUEST_CODE);
 
         URL = "rtsp://145.49.24.137/live/stream";
 
         rtspCamera2 = new RtspCamera2(surfaceView, this);
 
         surfaceView.getHolder().addCallback(this);
-
-        final ArrayList<Message> msgs = new ArrayList<Message>();
-
-        testButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Message test = new Message();
-                test.setMessage("Dit is een bericht dat door een random gebruiker is gestuurd en deze wordt in de applicatie getoond.");
-                msgs.add(test);
-
-                recyclerView.getAdapter().notifyDataSetChanged();
-                recyclerView.scrollToPosition(recyclerView.getAdapter().getItemCount() - 1);
-
-            }
-        });
-
+        Random r = new Random();
         for (int i = 0; i < 100; i++) {
-            Message test = new Message();
-            test.setMessage("Message: " + i);
+            int Low = 10;
+            int High = 5000;
+            int Result = r.nextInt(High-Low) + Low;
+            Message test = new Message.Builder(Message.TYPE_MESSAGE).message(("Message: " + i)).username("user" + Result + ": ").build();
+
             if(i == 43){
-                test.setMessage("DIT IS EEN FUCKING LANG BERICHT OM TE TESTEN OF DE APPLICATIE DIT ONDERSTEUNT");
+                test = new Message.Builder(Message.TYPE_MESSAGE).message("DIT IS EEN FUCKING LANG BERICHT OM TE TESTEN OF DE APPLICATIE DIT ONDERSTEUNT").username("user" + Result + ": ").build();
             }
-            Log.i("YOLO", "onCreate: Created Message: " + i);
-            msgs.add(test);
+
+            Log.i(TAG, "onCreate: Created Message: " + i);
+            messages.add(test);
         }
 
         startSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -150,29 +126,25 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
             }
         });
 
-
-
         cameraSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                    try {
-                        rtspCamera2.switchCamera();
-                    } catch (CameraOpenException e) {
-                        Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
+                try {
+                    rtspCamera2.switchCamera();
+                } catch (CameraOpenException e) {
+                    Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
-        MessageListAdapter adapter = new MessageListAdapter(this, msgs);
-        recyclerView.setAdapter(adapter);
+        MessageAdapter adapter = new MessageAdapter(this, messages);
+        messagesView.setAdapter(adapter);
 
         LinearLayoutManager layoutManager = new LinearLayoutManager(MainActivity.this);
         //layoutManager.setReverseLayout(true);
         layoutManager.setStackFromEnd(true);
-        recyclerView.setLayoutManager(layoutManager);
-
+        messagesView.setLayoutManager(layoutManager);
     }
-
 
     @Override
     public void onConnectionSuccessRtsp() {
@@ -307,4 +279,243 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
     //    });
     //}
 
+    private void connectSocket() {
+        socket.on(Socket.EVENT_CONNECT, onConnect);
+        socket.on(Socket.EVENT_DISCONNECT, onDisconnect);
+        socket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
+        socket.on(Socket.EVENT_CONNECT_TIMEOUT, onConnectError);
+        socket.on("MESSAGE", onNewMessage);
+        socket.on("user joined", onUserJoined);
+        socket.on("user left", onUserLeft);
+        //socket.on("typing", onTyping);
+        //1socket.on("stop typing", onStopTyping);
+        socket.connect();
+    }
+
+    private Emitter.Listener onConnect = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if(!isConnected) {
+                        Log.i(TAG, "run: Connected");
+                        Toast.makeText(getApplicationContext(), R.string.connect, Toast.LENGTH_LONG).show();
+                        isConnected = true;
+                    }
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onDisconnect = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Log.i(TAG, "disconnected");
+                    isConnected = false;
+                    Toast.makeText(getApplicationContext(), R.string.disconnect, Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onConnectError = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Log.e(TAG, "Error connecting");
+                    Toast.makeText(getApplicationContext(), R.string.error_connect, Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onNewMessage = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+                    JSONObject user;
+                    String message;
+
+                    Log.i(TAG, "run: MESSAGEGET");
+                    
+                    try {
+                        user = data.getJSONObject("User");
+                        username = user.getString("Name");
+                        username += ": ";
+                        message = data.getString("Content");
+                        Log.i(TAG, "run: " + message);
+                    } catch (JSONException e) {
+                        Log.e(TAG, e.getMessage());
+                        return;
+                    }
+
+                    //removeTyping(username);
+                    addMessage(username, message);
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onUserJoined = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+                    String username;
+                    int numUsers;
+
+                    try {
+                        //username = data.getString("username");
+                        numUsers = data.getInt("numUsers");
+                    } catch (JSONException e) {
+                        Log.e(TAG, e.getMessage());
+                        return;
+                    }
+
+                    //addLog(getResources().getString(R.string.message_user_joined, username));
+                    viewerCountTextView.setText(numUsers);
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onUserLeft = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+                    String username;
+                    int numUsers;
+
+                    try {
+                        //username = data.getString("username");
+                        numUsers = data.getInt("numUsers");
+                    } catch (JSONException e) {
+                        Log.e(TAG, e.getMessage());
+                        return;
+                    }
+
+                    //addLog(getResources().getString(R.string.message_user_left, username));
+                    viewerCountTextView.setText(numUsers);
+                    //removeTyping(username);
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onTyping = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+                    String username;
+
+                    try {
+                        username = data.getString("username");
+                    } catch (JSONException e) {
+                        Log.e(TAG, e.getMessage());
+                        return;
+                    }
+
+                    addTyping(username);
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onStopTyping = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+                    String username;
+
+                    try {
+                        username = data.getString("username");
+                    } catch (JSONException e) {
+                        Log.e(TAG, e.getMessage());
+                        return;
+                    }
+
+                    removeTyping(username);
+                }
+            });
+        }
+    };
+
+    private Runnable onTypingTimeout = new Runnable() {
+        @Override
+        public void run() {
+            if (!typing) {
+                return;
+            }
+
+            typing = false;
+            socket.emit("stop typing");
+        }
+    };
+
+    private void addLog(String message) {
+        messages.add(new Message.Builder(Message.TYPE_LOG).message(message).build());
+        messageAdapter.notifyItemInserted(messages.size() - 1);
+        scrollToBottom();
+    }
+
+    private void leave() {
+        username = null;
+        socket.disconnect();
+        socket.connect();
+        startSignIn();
+    }
+
+    private void addMessage(String username, String message) {
+        messages.add(new Message.Builder(Message.TYPE_MESSAGE).username(username).message(message).build());
+        //messages.add(new Message.Builder(Message.TYPE_MESSAGE).message(message).build());
+        messageAdapter.notifyItemInserted(messages.size() - 1);
+        scrollToBottom();
+    }
+
+    private void addTyping(String username) {
+        messages.add(new Message.Builder(Message.TYPE_ACTION).username(username).build());
+        messageAdapter.notifyItemInserted(messages.size() - 1);
+        scrollToBottom();
+    }
+
+    private void removeTyping(String username) {
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            Message message = messages.get(i);
+
+            if (message.getType() == Message.TYPE_ACTION && message.getUsername().equals(username)) {
+                messages.remove(i);
+                messageAdapter.notifyItemRemoved(i);
+            }
+        }
+    }
+
+    private void startSignIn() {
+        username = null;
+        Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
+        startActivityForResult(intent, REQUEST_LOGIN);
+    }
+
+    private void scrollToBottom() {
+        messagesView.scrollToPosition(messageAdapter.getItemCount() - 1);
+    }
 }
