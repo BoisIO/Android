@@ -22,6 +22,7 @@ import android.widget.Toast;
 import com.pedro.encoder.input.video.CameraOpenException;
 
 import com.pedro.rtplibrary.rtsp.RtspCamera2;
+import com.pedro.rtplibrary.view.OpenGlView;
 import com.pedro.rtsp.utils.ConnectCheckerRtsp;
 
 import org.json.JSONException;
@@ -40,7 +41,7 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 
 public class MainActivity extends AppCompatActivity implements ConnectCheckerRtsp, View.OnClickListener, SurfaceHolder.Callback {
-    @BindView(R.id.main_surfaceView) SurfaceView surfaceView;
+    @BindView(R.id.main_surfaceView) OpenGlView surfaceView;
     @BindView(R.id.main_recycler) RecyclerView messagesView;
     @BindView(R.id.main_startSwitch) Switch startSwitch;
     @BindView(R.id.main_cameraSwitch) Switch cameraSwitch;
@@ -81,6 +82,9 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
 
         connectSocket();
 
+        //surfaceView.setKeepAspectRatio(true);
+
+
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.CAMERA}, CAMERA_REQUEST_CODE);
 
@@ -88,11 +92,15 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
 
         rtspCamera2 = new RtspCamera2(surfaceView, this);
 
+        Log.i(TAG, "onCreate: BITRATE" + rtspCamera2.getBitrate());
+
         List<Size> test1 = rtspCamera2.getResolutionsBack();
 
         for(Size size : test1){
             Log.i(TAG, "onCreate: " + size);
         }
+
+
 
         surfaceView.getHolder().addCallback(this);
         Random r = new Random();
@@ -116,7 +124,8 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 if (b) {
                     Toast.makeText(MainActivity.this, "Turned stream on", Toast.LENGTH_SHORT).show();
                     if (!rtspCamera2.isStreaming()) {
-                        if (rtspCamera2.isRecording() || rtspCamera2.prepareAudio() && rtspCamera2.prepareVideo()) {
+                        if (rtspCamera2.isRecording() || rtspCamera2.prepareAudio()) {
+                            rtspCamera2.prepareVideo(1920, 1080, 60, 1228800, false, 90);
 
                             Log.i("test", "onCheckedChanged: STARTING STREAM");
                             rtspCamera2.startStream(URL);
