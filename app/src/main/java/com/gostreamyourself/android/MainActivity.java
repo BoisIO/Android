@@ -8,11 +8,19 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.SurfaceHolder;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.inputmethod.EditorInfo;
+import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -42,6 +50,8 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
     @BindView(R.id.main_startSwitch) Switch startSwitch;
     @BindView(R.id.main_cameraSwitch) Switch cameraSwitch;
     @BindView(R.id.main_viewerCount) TextView viewerCountTextView;
+    @BindView(R.id.main_sendButton) ImageButton sendButton;
+    @BindView(R.id.main_messageInput) EditText messageEditText;
 
     private static final String TAG = MainActivity.class.getSimpleName();
     private Socket socket;
@@ -54,6 +64,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
     private String URL;
     private RtspCamera2 rtspCamera2;
 
+    private static final int TYPING_TIMER_LENGTH = 600;
     private static final int CAMERA_REQUEST_CODE = 1888;
     private static final int REQUEST_LOGIN = 0;
 
@@ -83,6 +94,54 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         Log.i(TAG, "onCreate: BITRATE" + rtspCamera2.getBitrate());
         surfaceView.getHolder().addCallback(this);
 
+        messageEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int id, KeyEvent event) {
+                if (id == R.id.send || id == EditorInfo.IME_NULL) {
+                    attemptSend();
+                    return true;
+                }
+
+                return false;
+            }
+        });
+
+        messageEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (null == username) {
+                    return;
+                }
+
+                if (!socket.connected()) {
+                    return;
+                }
+
+//                if (!typing) {
+//                    typing = true;
+//                    socket.emit("typing");
+//                }
+
+                //typingHandler.removeCallbacks(onTypingTimeout);
+                //typingHandler.postDelayed(onTypingTimeout, TYPING_TIMER_LENGTH);
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+        sendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                attemptSend();
+            }
+        });
+
         startSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
@@ -95,13 +154,11 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                             Log.i("test", "onCheckedChanged: STARTING STREAM");
                             rtspCamera2.startStream(URL);
                         } else {
-                            Toast.makeText(MainActivity.this, "Error preparing stream, This device cant do it",
-                                    Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MainActivity.this, "Error preparing stream, This device cant do it", Toast.LENGTH_SHORT).show();
                         }
                     }
                 } else {
                     Toast.makeText(MainActivity.this, "Turned stream off", Toast.LENGTH_SHORT).show();
-
                     rtspCamera2.stopStream();
                 }
             }
@@ -141,8 +198,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_LONG)
-                        .show();
+                Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_LONG).show();
                 rtspCamera2.stopStream();
             }
         });
@@ -401,6 +457,32 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
             }
         }
     }
+
+    private void attemptSend() {
+        if (null == username) {
+            return;
+        }
+
+        if (!socket.connected()) {
+            return;
+        }
+
+        //typing = false;
+
+        String message = messageEditText.getText().toString().trim();
+
+        if (TextUtils.isEmpty(message)) {
+            messageEditText.requestFocus();
+            return;
+        }
+
+        messageEditText.setText("");
+        addMessage(username, message);
+
+        // perform the sending message attempt.
+        socket.emit("MESSAGE_SEND", message);
+    }
+
 
     private void startSignIn() {
         username = null;
