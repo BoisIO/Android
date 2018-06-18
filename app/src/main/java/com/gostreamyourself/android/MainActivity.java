@@ -30,6 +30,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.net.*;
 
 import io.socket.client.IO;
 import io.socket.client.Socket;
@@ -66,7 +67,13 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         messageAdapter = new MessageAdapter(getApplicationContext(), messages);
 
         try {
-            socket = IO.socket("http://noauthy.herokuapp.com/chat/5b2235eae7179a589281bbf5");
+
+
+            String url = "http://back3ndb0is.herokuapp.com/chat/socket?";
+
+            IO.Options mOptions = new IO.Options();
+            mOptions.query = "stream=" + "5b20e0d7e7179a589280ca7f";
+            socket = IO.socket(url, mOptions);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
@@ -277,7 +284,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         socket.on(Socket.EVENT_DISCONNECT, onDisconnect);
         socket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
         socket.on(Socket.EVENT_CONNECT_TIMEOUT, onConnectError);
-        socket.on("new message", onNewMessage);
+        socket.on("MESSAGE", onNewMessage);
         socket.on("user joined", onUserJoined);
         socket.on("user left", onUserLeft);
         //socket.on("typing", onTyping);
@@ -292,6 +299,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 @Override
                 public void run() {
                     if(!isConnected) {
+                        Log.i(TAG, "run: Connected");
                         Toast.makeText(getApplicationContext(), R.string.connect, Toast.LENGTH_LONG).show();
                         isConnected = true;
                     }
@@ -334,12 +342,17 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 @Override
                 public void run() {
                     JSONObject data = (JSONObject) args[0];
-                    String username;
+                    JSONObject user;
                     String message;
 
+                    Log.i(TAG, "run: MESSAGEGET");
+                    
                     try {
-                        username = data.getString("username");
-                        message = data.getString("message");
+                        user = data.getJSONObject("User");
+                        username = user.getString("Name");
+                        username += ": ";
+                        message = data.getString("Content");
+                        Log.i(TAG, "run: " + message);
                     } catch (JSONException e) {
                         Log.e(TAG, e.getMessage());
                         return;
@@ -474,6 +487,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
 
     private void addMessage(String username, String message) {
         messages.add(new Message.Builder(Message.TYPE_MESSAGE).username(username).message(message).build());
+        //messages.add(new Message.Builder(Message.TYPE_MESSAGE).message(message).build());
         messageAdapter.notifyItemInserted(messages.size() - 1);
         scrollToBottom();
     }
