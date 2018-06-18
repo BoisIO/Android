@@ -9,6 +9,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.util.Size;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -83,9 +84,18 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.CAMERA}, CAMERA_REQUEST_CODE);
 
-        URL = "rtsp://145.49.24.137/live/stream";
+        URL = "rtsp://145.49.53.161:80/live/stream";
 
         rtspCamera2 = new RtspCamera2(surfaceView, this);
+
+        rtspCamera2.prepareVideo(1920, 1080, 60, 1228800, true, 90);
+
+
+        List<Size> test1 = rtspCamera2.getResolutionsBack();
+
+        for(Size size : test1){
+            Log.i(TAG, "onCreate: " + size);
+        }
 
         surfaceView.getHolder().addCallback(this);
         Random r = new Random();
@@ -285,8 +295,8 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         socket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
         socket.on(Socket.EVENT_CONNECT_TIMEOUT, onConnectError);
         socket.on("MESSAGE", onNewMessage);
-        socket.on("user joined", onUserJoined);
-        socket.on("user left", onUserLeft);
+        socket.on("VIEWERS", onUserJoined);
+        socket.on("VIEWERS", onUserLeft);
         //socket.on("typing", onTyping);
         //1socket.on("stop typing", onStopTyping);
         socket.connect();
@@ -373,18 +383,18 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 public void run() {
                     JSONObject data = (JSONObject) args[0];
                     String username;
-                    int numUsers;
+                    int numUsers = 0;
 
                     try {
                         //username = data.getString("username");
-                        numUsers = data.getInt("numUsers");
+                        numUsers = data.getInt("5b20e0d7e7179a589280ca7f");
                     } catch (JSONException e) {
                         Log.e(TAG, e.getMessage());
                         return;
                     }
 
                     //addLog(getResources().getString(R.string.message_user_joined, username));
-                    viewerCountTextView.setText(numUsers);
+                    viewerCountTextView.setText(String.valueOf(numUsers));
                 }
             });
         }
@@ -397,19 +407,24 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 @Override
                 public void run() {
                     JSONObject data = (JSONObject) args[0];
+                    int viewers;
                     String username;
-                    int numUsers;
+                    int numUsers = 0;
+
+                    Log.i(TAG, "run: " + data.toString());
 
                     try {
                         //username = data.getString("username");
-                        numUsers = data.getInt("numUsers");
+                        viewers = data.getInt("5b20e0d7e7179a589280ca7f");
+                        Log.i(TAG, "run: " + String.valueOf(viewers));
+                        //numUsers = viewers.get()
                     } catch (JSONException e) {
                         Log.e(TAG, e.getMessage());
                         return;
                     }
 
                     //addLog(getResources().getString(R.string.message_user_left, username));
-                    viewerCountTextView.setText(numUsers);
+                    viewerCountTextView.setText(String.valueOf(viewers));
                     //removeTyping(username);
                 }
             });

@@ -24,7 +24,8 @@
         android:text="0"
         android:layout_marginLeft="5dp"
         android:layout_marginTop="2dp"
-        android:layout_toRightOf="@id/main_viewerImage"/>
+        android:layout_toRightOf="@id/main_viewerImage"
+        style="@style/UserCountOverlay"/>
 
     <Switch
         android:id="@+id/main_startSwitch"
