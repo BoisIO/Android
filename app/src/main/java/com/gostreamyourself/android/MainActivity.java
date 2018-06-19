@@ -125,7 +125,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                     Toast.makeText(MainActivity.this, "Turned stream on", Toast.LENGTH_SHORT).show();
                     if (!rtspCamera2.isStreaming()) {
                         if (rtspCamera2.isRecording() || rtspCamera2.prepareAudio()) {
-                            rtspCamera2.prepareVideo(1920, 1080, 60, 1228800, false, 90);
+                            rtspCamera2.prepareVideo(480, 320, 20, 1228800, false, 90);
 
                             Log.i("test", "onCheckedChanged: STARTING STREAM");
                             rtspCamera2.startStream(URL);
