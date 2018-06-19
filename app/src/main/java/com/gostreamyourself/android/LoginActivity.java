@@ -72,6 +72,7 @@ import butterknife.ButterKnife;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class LoginActivity extends AppCompatActivity {
+    private static final String TAG = "LoginActivity";
     @BindView(R.id.login_loginButton) Button loginBtn;
     @BindView(R.id.login_user) EditText userTxt;
     @BindView(R.id.login_errorTxt) TextView errorTxt;
@@ -192,11 +193,13 @@ public class LoginActivity extends AppCompatActivity {
         queue.add(stringRequest);
     }
 
-    private void login(final String token, final String username) {
+    private void login(String token, final String username) {
         try {
 
+//            token = "8f5c8dbe-a237-4405-bb0a-848e9cfb8ad8";
             final String hexString = Sign(token);
 
+            final String finalToken = token;
             CustomLoginRequest postRequest = new CustomLoginRequest(Request.Method.GET, url,
                     new Response.Listener<CustomLoginRequest.ResponseM>() {
                         @Override
@@ -204,9 +207,55 @@ public class LoginActivity extends AppCompatActivity {
                             // response
                             Log.d("Response", response.headers.get("Token"));
                             errorTxt.setVisibility(View.INVISIBLE);
-                            Intent gotoMain = new Intent(LoginActivity.this, MainActivity.class);
-                            startActivity(gotoMain);
-                            finish();
+                            getStreamId(finalToken, username);
+                        }
+                    },
+                    new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            // TODO Auto-generated method stub
+                            Log.d("MANIZZLE", "error => " + error.toString());
+                            disableLoadScreen();
+                        }
+                    }
+            ) {
+                @Override
+                public Map<String, String> getHeaders() throws AuthFailureError {
+                    Map<String, String> params = new HashMap<String, String>();
+
+                    //Log.i("EncryptedToken", "getHeaders: " + encryptedToken.toString());
+                    params.put("token", finalToken);
+                    params.put("signature", hexString);
+                    params.put("name", username);
+
+                    return params;
+                }
+            };
+
+            RequestQueue queue1 = Volley.newRequestQueue(LoginActivity.this);
+            queue1.add(postRequest);
+
+        } catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    private void getStreamId(final String token, final String username) {
+        try {
+
+            final String hexString = Sign(token);
+
+            CustomLoginRequest postRequest = new CustomLoginRequest(Request.Method.GET, "http://certifcation.herokuapp.com/streams/ByName/Gerben%20Droogers",
+                    new Response.Listener<CustomLoginRequest.ResponseM>() {
+                        @Override
+                        public void onResponse(CustomLoginRequest.ResponseM response) {
+                            // response
+                            Log.d("Response", response.headers.get("Token"));
+                            Log.e(TAG, "onResponse: " + response );
+
+
+                            errorTxt.setVisibility(View.INVISIBLE);
+                            goBackToMainIntent();
                         }
                     },
                     new Response.ErrorListener() {
@@ -239,12 +288,20 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
+    private void goBackToMainIntent() {
+        Intent gotoMain = new Intent(LoginActivity.this, MainActivity.class);
+        startActivity(gotoMain);
+        finish();
+    }
+
     private String Sign (String token) throws SignatureException, NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeyException {
         //From here you will get headers
         Log.i("Token", "onResponse: " + token);
-//        String json = "{ token: \"" + token + "\" }";
-        String json = "{}";
+        String json = "{\"token\":\"" + token + "\"}";
+//        String json = "{}";
+        Log.i(TAG, "Sign: TOKEN TO SIGN: "  + token);
         byte[] data = json.getBytes();
+        Log.e(TAG, "Sign: " + json );
 
         Signature instance = Signature.getInstance("SHA256withRSA");
         instance.initSign(privateKey);
