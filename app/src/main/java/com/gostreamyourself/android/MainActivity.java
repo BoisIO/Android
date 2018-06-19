@@ -8,13 +8,19 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.util.Log;
-import android.util.Size;
+import android.view.KeyEvent;
 import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.inputmethod.EditorInfo;
+import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -31,8 +37,6 @@ import org.json.JSONObject;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
-import java.net.*;
 
 import io.socket.client.IO;
 import io.socket.client.Socket;
@@ -46,6 +50,8 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
     @BindView(R.id.main_startSwitch) Switch startSwitch;
     @BindView(R.id.main_cameraSwitch) Switch cameraSwitch;
     @BindView(R.id.main_viewerCount) TextView viewerCountTextView;
+    @BindView(R.id.main_sendButton) ImageButton sendButton;
+    @BindView(R.id.main_messageInput) EditText messageEditText;
 
     private static final String TAG = MainActivity.class.getSimpleName();
     private Socket socket;
@@ -58,6 +64,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
     private String URL;
     private RtspCamera2 rtspCamera2;
 
+    private static final int TYPING_TIMER_LENGTH = 600;
     private static final int CAMERA_REQUEST_CODE = 1888;
     private static final int REQUEST_LOGIN = 0;
 
@@ -69,54 +76,71 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         messageAdapter = new MessageAdapter(getApplicationContext(), messages);
 
         try {
-
-
             String url = "http://back3ndb0is.herokuapp.com/chat/socket?";
-
-            IO.Options mOptions = new IO.Options();
-            mOptions.query = "stream=" + "5b20e0d7e7179a589280ca7f";
-            socket = IO.socket(url, mOptions);
+            IO.Options options = new IO.Options();
+            options.query = "stream=5b20e0d7e7179a589280ca7f";
+            socket = IO.socket(url, options);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
 
         connectSocket();
-
-        //surfaceView.setKeepAspectRatio(true);
-
-
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.CAMERA}, CAMERA_REQUEST_CODE);
 
         URL = "rtsp://145.49.53.161:80/live/stream";
 
         rtspCamera2 = new RtspCamera2(surfaceView, this);
-
         Log.i(TAG, "onCreate: BITRATE" + rtspCamera2.getBitrate());
-
-        List<Size> test1 = rtspCamera2.getResolutionsBack();
-
-        for(Size size : test1){
-            Log.i(TAG, "onCreate: " + size);
-        }
-
-
-
         surfaceView.getHolder().addCallback(this);
-        Random r = new Random();
-        for (int i = 0; i < 100; i++) {
-            int Low = 10;
-            int High = 5000;
-            int Result = r.nextInt(High-Low) + Low;
-            Message test = new Message.Builder(Message.TYPE_MESSAGE).message(("Message: " + i)).username("user" + Result + ": ").build();
 
-            if(i == 43){
-                test = new Message.Builder(Message.TYPE_MESSAGE).message("DIT IS EEN FUCKING LANG BERICHT OM TE TESTEN OF DE APPLICATIE DIT ONDERSTEUNT").username("user" + Result + ": ").build();
+        messageEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int id, KeyEvent event) {
+                if (id == R.id.send || id == EditorInfo.IME_NULL) {
+                    attemptSend();
+                    return true;
+                }
+
+                return false;
+            }
+        });
+
+        messageEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
 
-            Log.i(TAG, "onCreate: Created Message: " + i);
-            messages.add(test);
-        }
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (null == username) {
+                    return;
+                }
+
+                if (!socket.connected()) {
+                    return;
+                }
+
+//                if (!typing) {
+//                    typing = true;
+//                    socket.emit("typing");
+//                }
+
+                //typingHandler.removeCallbacks(onTypingTimeout);
+                //typingHandler.postDelayed(onTypingTimeout, TYPING_TIMER_LENGTH);
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+        sendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                attemptSend();
+            }
+        });
 
         startSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -130,13 +154,11 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                             Log.i("test", "onCheckedChanged: STARTING STREAM");
                             rtspCamera2.startStream(URL);
                         } else {
-                            Toast.makeText(MainActivity.this, "Error preparing stream, This device cant do it",
-                                    Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MainActivity.this, "Error preparing stream, This device cant do it", Toast.LENGTH_SHORT).show();
                         }
                     }
                 } else {
                     Toast.makeText(MainActivity.this, "Turned stream off", Toast.LENGTH_SHORT).show();
-
                     rtspCamera2.stopStream();
                 }
             }
@@ -155,9 +177,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
 
         MessageAdapter adapter = new MessageAdapter(this, messages);
         messagesView.setAdapter(adapter);
-
         LinearLayoutManager layoutManager = new LinearLayoutManager(MainActivity.this);
-        //layoutManager.setReverseLayout(true);
         layoutManager.setStackFromEnd(true);
         messagesView.setLayoutManager(layoutManager);
     }
@@ -178,10 +198,8 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_LONG)
-                        .show();
+                Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_LONG).show();
                 rtspCamera2.stopStream();
-                //button.setText(R.string.start_button);
             }
         });
     }
@@ -203,7 +221,6 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
             public void run() {
                 Toast.makeText(MainActivity.this, "Auth error", Toast.LENGTH_SHORT).show();
                 rtspCamera2.stopStream();
-                //button.setText(R.string.start_button);
             }
         });
     }
@@ -233,67 +250,10 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         rtspCamera2.stopPreview();
     }
 
-
     @Override
     public void onClick(View view) {
 
     }
-
-    //@Override
-    //public void onConnectionSuccessRtmp() {
-    //    runOnUiThread(new Runnable() {
-    //        @Override
-    //        public void run() {
-    //            Toast.makeText(MainActivity.this, "Connection success", Toast.LENGTH_SHORT).show();
-    //        }
-    //    });
-    //}
-//
-    //@Override
-    //public void onConnectionFailedRtmp(final String reason) {
-    //    runOnUiThread(new Runnable() {
-    //        @Override
-    //        public void run() {
-    //            Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_SHORT)
-    //                    .show();
-    //            rtspCamera2.stopStream();
-    //        }
-    //    });
-    //}
-//
-    //@Override
-    //public void onDisconnectRtmp() {
-    //    runOnUiThread(new Runnable() {
-    //        @Override
-    //        public void run() {
-    //            Toast.makeText(MainActivity.this, "Disconnected", Toast.LENGTH_SHORT).show();
-    //            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
-    //                    && rtspCamera2.isRecording()) {
-    //                rtspCamera2.stopRecord();
-    //            }
-    //        }
-    //    });
-    //}
-//
-    //@Override
-    //public void onAuthErrorRtmp() {
-    //    runOnUiThread(new Runnable() {
-    //        @Override
-    //        public void run() {
-    //            Toast.makeText(MainActivity.this, "Auth error", Toast.LENGTH_SHORT).show();
-    //        }
-    //    });
-    //}
-//
-    //@Override
-    //public void onAuthSuccessRtmp() {
-    //    runOnUiThread(new Runnable() {
-    //        @Override
-    //        public void run() {
-    //            Toast.makeText(MainActivity.this, "Auth success", Toast.LENGTH_SHORT).show();
-    //        }
-    //    });
-    //}
 
     private void connectSocket() {
         socket.on(Socket.EVENT_CONNECT, onConnect);
@@ -301,8 +261,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         socket.on(Socket.EVENT_CONNECT_ERROR, onConnectError);
         socket.on(Socket.EVENT_CONNECT_TIMEOUT, onConnectError);
         socket.on("MESSAGE", onNewMessage);
-        socket.on("VIEWERS", onUserJoined);
-        socket.on("VIEWERS", onUserLeft);
+        socket.on("VIEWERS", onViewersChange);
         //socket.on("typing", onTyping);
         //1socket.on("stop typing", onStopTyping);
         socket.connect();
@@ -316,7 +275,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 public void run() {
                     if(!isConnected) {
                         Log.i(TAG, "run: Connected");
-                        Toast.makeText(getApplicationContext(), R.string.connect, Toast.LENGTH_LONG).show();
+                        Toast.makeText(MainActivity.this, R.string.connect, Toast.LENGTH_LONG).show();
                         isConnected = true;
                     }
                 }
@@ -332,7 +291,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 public void run() {
                     Log.i(TAG, "disconnected");
                     isConnected = false;
-                    Toast.makeText(getApplicationContext(), R.string.disconnect, Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this, R.string.disconnect, Toast.LENGTH_LONG).show();
                 }
             });
         }
@@ -345,7 +304,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 @Override
                 public void run() {
                     Log.e(TAG, "Error connecting");
-                    Toast.makeText(getApplicationContext(), R.string.error_connect, Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this, R.string.error_connect, Toast.LENGTH_LONG).show();
                 }
             });
         }
@@ -357,16 +316,17 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    StringBuilder stringBuilder = new StringBuilder();
                     JSONObject data = (JSONObject) args[0];
                     JSONObject user;
                     String message;
-
                     Log.i(TAG, "run: MESSAGEGET");
                     
                     try {
                         user = data.getJSONObject("User");
-                        username = user.getString("Name");
-                        username += ": ";
+                        stringBuilder.append(user.getString("Name"));
+                        stringBuilder.append(": ");
+                        username = stringBuilder.toString();
                         message = data.getString("Content");
                         Log.i(TAG, "run: " + message);
                     } catch (JSONException e) {
@@ -381,7 +341,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         }
     };
 
-    private Emitter.Listener onUserJoined = new Emitter.Listener() {
+    private Emitter.Listener onViewersChange = new Emitter.Listener() {
         @Override
         public void call(final Object... args) {
             runOnUiThread(new Runnable() {
@@ -401,37 +361,6 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
 
                     //addLog(getResources().getString(R.string.message_user_joined, username));
                     viewerCountTextView.setText(String.valueOf(numUsers));
-                }
-            });
-        }
-    };
-
-    private Emitter.Listener onUserLeft = new Emitter.Listener() {
-        @Override
-        public void call(final Object... args) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    JSONObject data = (JSONObject) args[0];
-                    int viewers;
-                    String username;
-                    int numUsers = 0;
-
-                    Log.i(TAG, "run: " + data.toString());
-
-                    try {
-                        //username = data.getString("username");
-                        viewers = data.getInt("5b20e0d7e7179a589280ca7f");
-                        Log.i(TAG, "run: " + String.valueOf(viewers));
-                        //numUsers = viewers.get()
-                    } catch (JSONException e) {
-                        Log.e(TAG, e.getMessage());
-                        return;
-                    }
-
-                    //addLog(getResources().getString(R.string.message_user_left, username));
-                    viewerCountTextView.setText(String.valueOf(viewers));
-                    //removeTyping(username);
                 }
             });
         }
@@ -508,7 +437,6 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
 
     private void addMessage(String username, String message) {
         messages.add(new Message.Builder(Message.TYPE_MESSAGE).username(username).message(message).build());
-        //messages.add(new Message.Builder(Message.TYPE_MESSAGE).message(message).build());
         messageAdapter.notifyItemInserted(messages.size() - 1);
         scrollToBottom();
     }
@@ -529,6 +457,32 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
             }
         }
     }
+
+    private void attemptSend() {
+        if (null == username) {
+            return;
+        }
+
+        if (!socket.connected()) {
+            return;
+        }
+
+        //typing = false;
+
+        String message = messageEditText.getText().toString().trim();
+
+        if (TextUtils.isEmpty(message)) {
+            messageEditText.requestFocus();
+            return;
+        }
+
+        messageEditText.setText("");
+        addMessage(username, message);
+
+        // perform the sending message attempt.
+        socket.emit("MESSAGE_SEND", message);
+    }
+
 
     private void startSignIn() {
         username = null;

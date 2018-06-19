@@ -46,36 +46,38 @@
     <android.support.v7.widget.RecyclerView
         android:id="@+id/main_recycler"
         android:layout_width="match_parent"
-        android:layout_height="250dp"
-        android:layout_alignParentBottom="true"/>
+        android:layout_height="200dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="50dp" />
 
-    <!--<LinearLayout-->
-        <!--android:layout_width="match_parent"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:layout_alignParentBottom="true"-->
-        <!--android:layout_alignParentStart="true"-->
-        <!--android:gravity="center_vertical"-->
-        <!--android:orientation="horizontal">-->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-        <!--<EditText-->
-            <!--android:id="@+id/main_messageInput"-->
-            <!--android:layout_width="0dp"-->
-            <!--android:layout_height="wrap_content"-->
-            <!--android:layout_weight="1"-->
-            <!--android:hint="@string/prompt_message"-->
-            <!--android:imeActionLabel="@string/action_send"-->
-            <!--android:imeOptions="actionSend"-->
-            <!--android:inputType="text"-->
-            <!--android:maxLines="1"-->
-            <!--android:singleLine="true" />-->
+        <EditText
+            android:id="@+id/main_messageInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="@string/prompt_message"
+            android:imeActionId="@+id/send"
+            android:imeActionLabel="@string/action_send"
+            android:imeOptions="actionSend"
+            android:inputType="text"
+            android:maxLines="1"
+            android:singleLine="true" />
 
-        <!--<ImageButton-->
-            <!--android:id="@+id/main_sendButton"-->
-            <!--android:layout_width="wrap_content"-->
-            <!--android:layout_height="wrap_content"-->
-            <!--android:contentDescription="@string/action_send"-->
-            <!--android:src="@android:drawable/ic_menu_send" />-->
+        <ImageButton
+            android:id="@+id/main_sendButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/action_send"
+            android:src="@android:drawable/ic_menu_send" />
 
-    <!--</LinearLayout>-->
+    </LinearLayout>
 
 </RelativeLayout>
