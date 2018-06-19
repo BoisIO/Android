@@ -77,6 +77,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
     private String userMsg;
 
     private String streamID;
+    private String chatID;
 
     private PrivateKey privateKey;
 
@@ -91,7 +92,11 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         ButterKnife.bind(this);
         messageAdapter = new MessageAdapter(getApplicationContext(), messages);
 
-        String chatId = "5b20e0d7e7179a589280ca7f";
+        String streamId = getIntent().getStringExtra("streamID");
+
+        Log.i(TAG, "onCreate: " + getIntent().getStringExtra("chatID"));
+
+        chatID = getIntent().getStringExtra("chatID");
         String signedChatId = "";
 
 
@@ -100,13 +105,15 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
             username = getIntent().getStringExtra("userName").toString();
             cerftificateName = getIntent().getStringExtra("certificateName");
 
+            cerftificateName = cerftificateName.toLowerCase().replace("certificate", "").replace(".key", ".crt");
+
+
             Log.i(TAG, "onCreate: CERTIFICATE" + cerftificateName);
 
             cerftificateName = cerftificateName.replace("Key", "Certificate");
             Log.i(TAG, "onCreate: CERTIFICATE2" + cerftificateName);
 
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] data = chatId.getBytes();
+            byte[] data = chatID.getBytes();
 
             Signature instance = Signature.getInstance("SHA256withRSA");
             instance.initSign(privateKey);
@@ -122,9 +129,6 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
             signedChatId =  signedChatId.replace(" ", "");
 
             signedChatId = signedChatId.toLowerCase();
-
-
-
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -140,7 +144,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
             String url = "http://back3ndb0is.herokuapp.com/chat/socket?";
 
             IO.Options mOptions = new IO.Options();
-            mOptions.query = "stream=" + "5b20e0d7e7179a589280ca7f" + "&signature=" + signedChatId + "&userkey=" + cerftificateName + "&username=" + username;
+            mOptions.query = "stream=" + chatID + "&signature=" + signedChatId + "&userkey=" + cerftificateName + "&username=" + username;
 
 
             Log.i(TAG, "onCreate: " + mOptions.toString());
@@ -160,7 +164,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.CAMERA}, CAMERA_REQUEST_CODE);
 
-        URL = "rtsp://145.49.53.161:80/live/stream";
+        URL = "rtsp://145.49.53.161:80/live/" + streamId;
 
         rtspCamera2 = new RtspCamera2(surfaceView, this);
         Log.i(TAG, "onCreate: BITRATE" + rtspCamera2.getBitrate());
@@ -432,7 +436,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
 
                     try {
                         //username = data.getString("username");
-                        numUsers = data.getInt("5b20e0d7e7179a589280ca7f");
+                        numUsers = data.getInt(chatID);
                     } catch (JSONException e) {
                         Log.e(TAG, e.getMessage());
                         return;
@@ -460,7 +464,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
 
                     try {
                         //username = data.getString("username");
-                        viewers = data.getInt("5b20e0d7e7179a589280ca7f");
+                        viewers = data.getInt(chatID);
                         Log.i(TAG, "run: " + String.valueOf(viewers));
                         //numUsers = viewers.get()
                     } catch (JSONException e) {
@@ -620,12 +624,18 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
 
         String signedPacket = "";
 
-        String streamID = "5b20e0d7e7179a589280ca7f";
-
         try {
+
+
+            Log.i(TAG, "attemptSend: message: " + message);
+            Log.i(TAG, "attemptSend: username: " + username);
+            Log.i(TAG, "attemptSend: chatID: " + chatID);
+            Log.i(TAG, "attemptSend: userkey: " + cerftificateName);
+
+
             packet.put("content", message);
             packet.put("username", username);
-            packet.put("stream", streamID);
+            packet.put("stream", chatID);
             packet.put("userkey", cerftificateName);
 
             byte[] data = packet.toString().getBytes();

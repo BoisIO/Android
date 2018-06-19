@@ -30,6 +30,8 @@ import com.github.angads25.filepicker.model.DialogConfigs;
 import com.github.angads25.filepicker.model.DialogProperties;
 import com.github.angads25.filepicker.view.FilePickerDialog;
 
+import org.bouncycastle.jcajce.provider.asymmetric.ec.KeyFactorySpi;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -81,6 +83,8 @@ public class LoginActivity extends AppCompatActivity {
     private String token;
     private PrivateKey privateKey;
     private String url = "http://certifcation.herokuapp.com/login";
+    private String fileName;
+    private String privKeyPEM;
 
 
     @Override
@@ -134,6 +138,7 @@ public class LoginActivity extends AppCompatActivity {
 
                 for(String path : files){
                     File file = new File(path);
+                    fileName = file.getName();
 
                     loadPrivateKey(file);
                 }
@@ -155,8 +160,8 @@ public class LoginActivity extends AppCompatActivity {
 
             Log.i("WATAS", "onSelectedFilePaths: " + temp);
 
-            String privKeyPEM = temp.replace("-----BEGIN PRIVATE KEY-----", "");
-            privKeyPEM = privKeyPEM.replace("-----END PRIVATE KEY-----", "");
+            privKeyPEM = temp.replace("-----BEGIN RSA PRIVATE KEY-----", "");
+            privKeyPEM = privKeyPEM.replace("-----END RSA PRIVATE KEY-----", "");
 
             privateKey = loadPrivateKey(privKeyPEM);
 
@@ -245,43 +250,104 @@ public class LoginActivity extends AppCompatActivity {
 
             final String hexString = Sign(token);
 
-            CustomLoginRequest postRequest = new CustomLoginRequest(Request.Method.GET, "http://certifcation.herokuapp.com/streams/ByName/Gerben%20Droogers",
-                    new Response.Listener<CustomLoginRequest.ResponseM>() {
-                        @Override
-                        public void onResponse(CustomLoginRequest.ResponseM response) {
-                            // response
-                            Log.d("Response", response.headers.get("Token"));
-                            Log.e(TAG, "onResponse: " + response );
+            String name = userTxt.getText().toString();
+            name = name.replace(" ", "%20");
+            String URL = "http://certifcation.herokuapp.com/streams/ByName/" + name;
 
 
-                            errorTxt.setVisibility(View.INVISIBLE);
-                            goBackToMainIntent();
-                        }
-                    },
-                    new Response.ErrorListener() {
+            JsonObjectRequest jsonObjReq = new JsonObjectRequest(Request.Method.GET,
+                    URL, null,
+                    new Response.Listener<JSONObject>() {
+
                         @Override
-                        public void onErrorResponse(VolleyError error) {
-                            // TODO Auto-generated method stub
-                            Log.d("MANIZZLE", "error => " + error.toString());
-                            disableLoadScreen();
+                        public void onResponse(JSONObject response) {
+                            Log.d(TAG, response.toString());
+
+                            try {
+                                String transparantID = response.getString("_id");
+                                String username = response.getString("Name");
+
+                                Log.i(TAG, "onResponse: " + response.getJSONArray("Streams").toString());
+
+                                JSONArray streams = response.getJSONArray("Streams");
+
+
+
+                                String chatID = streams.getJSONObject(0).getString("_id");
+
+                                Intent gotoMain = new Intent(LoginActivity.this, MainActivity.class);
+                                gotoMain.putExtra("userName", username);
+                                gotoMain.putExtra("certificateName", fileName);
+                                gotoMain.putExtra("streamID", transparantID);
+                                gotoMain.putExtra("chatID", chatID);
+                                gotoMain.putExtra("privateKey", privKeyPEM);
+
+                                startActivity(gotoMain);
+                                finish();
+
+
+                            } catch (Exception e){
+                                e.printStackTrace();
+                            }
+
+
+
                         }
-                    }
-            ) {
+                    }, new Response.ErrorListener() {
+
+                @Override
+                public void onErrorResponse(VolleyError error) {
+
+                }
+            }){
                 @Override
                 public Map<String, String> getHeaders() throws AuthFailureError {
                     Map<String, String> params = new HashMap<String, String>();
-
                     //Log.i("EncryptedToken", "getHeaders: " + encryptedToken.toString());
                     params.put("token", token);
                     params.put("signature", hexString);
                     params.put("name", username);
-
                     return params;
                 }
             };
 
+            //CustomLoginRequest postRequest = new CustomLoginRequest(Request.Method.GET, "http://certifcation.herokuapp.com/streams/ByName/Gerben%20Droogers",
+            //        new Response.Listener<CustomLoginRequest.ResponseM>() {
+            //            @Override
+            //            public void onResponse(CustomLoginRequest.ResponseM response) {
+            //                // response
+            //                Log.d("Response", response.headers.get("Token"));
+            //                Log.e(TAG, "onResponse: " + response );
+//
+//
+            //                errorTxt.setVisibility(View.INVISIBLE);
+            //                goBackToMainIntent();
+            //            }
+            //        },
+            //        new Response.ErrorListener() {
+            //            @Override
+            //            public void onErrorResponse(VolleyError error) {
+            //                // TODO Auto-generated method stub
+            //                Log.d("MANIZZLE", "error => " + error.toString());
+            //                disableLoadScreen();
+            //            }
+            //        }
+            //) {
+            //    @Override
+            //    public Map<String, String> getHeaders() throws AuthFailureError {
+            //        Map<String, String> params = new HashMap<String, String>();
+//
+            //        //Log.i("EncryptedToken", "getHeaders: " + encryptedToken.toString());
+            //        params.put("token", token);
+            //        params.put("signature", hexString);
+            //        params.put("name", username);
+//
+            //        return params;
+            //    }
+            //};
+
             RequestQueue queue1 = Volley.newRequestQueue(LoginActivity.this);
-            queue1.add(postRequest);
+            queue1.add(jsonObjReq);
 
         } catch(Exception e){
             e.printStackTrace();
