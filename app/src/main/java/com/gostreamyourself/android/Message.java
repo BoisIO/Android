@@ -25,7 +25,6 @@ public class Message {
         return username;
     };
 
-
     public static class Builder {
         private final int type;
         private String username;

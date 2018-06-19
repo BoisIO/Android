@@ -1,15 +1,4 @@
-*.iml
-.gradle
-/local.properties
-/.idea/workspace.xml
-/.idea/libraries
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.idea/caches
-
--# Built application files
+# Built application files
 *.apk
 *.ap_
 
