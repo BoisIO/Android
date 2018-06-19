@@ -130,9 +130,9 @@ public class LoginActivity extends AppCompatActivity {
                                 Log.i("WATAS", "onSelectedFilePaths: " + temp);
 
                                 String privKeyPEM = temp.replace("-----BEGIN PRIVATE KEY-----", "");
-                                privKeyPEM = privKeyPEM.replace("-----END PRIVATE KEY-----", "");
+                                final String privKeyPEMFinal = privKeyPEM.replace("-----END PRIVATE KEY-----", "");
 
-                                privateKey = loadPrivateKey(privKeyPEM);
+                                privateKey = loadPrivateKey(privKeyPEMFinal);
 
                                 Log.i("test", "onSelectedFilePaths: " + privateKey.toString());
 
@@ -192,6 +192,10 @@ public class LoginActivity extends AppCompatActivity {
                                                                     Log.d("Response", response);
                                                                     errorTxt.setVisibility(View.INVISIBLE);
                                                                     Intent gotoMain = new Intent(LoginActivity.this, MainActivity.class);
+                                                                    gotoMain.putExtra("privateKey", privKeyPEMFinal);
+                                                                    gotoMain.putExtra("userName", userTxt.getText().toString());
+                                                                    gotoMain.putExtra("certificateName", file.getName());
+
                                                                     startActivity(gotoMain);
                                                                     finish();
                                                                 }
@@ -259,6 +263,7 @@ public class LoginActivity extends AppCompatActivity {
     public static PrivateKey loadPrivateKey(String stored) throws GeneralSecurityException, IOException
     {
         byte [] pkcs8EncodedBytes = android.util.Base64.decode(stored, android.util.Base64.DEFAULT);
+
 
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(pkcs8EncodedBytes);
         KeyFactory kf = KeyFactory.getInstance("RSA");

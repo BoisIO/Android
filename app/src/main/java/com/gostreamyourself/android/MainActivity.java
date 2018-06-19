@@ -8,13 +8,17 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.Size;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -25,10 +29,19 @@ import com.pedro.rtplibrary.rtsp.RtspCamera2;
 import com.pedro.rtplibrary.view.OpenGlView;
 import com.pedro.rtsp.utils.ConnectCheckerRtsp;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URISyntaxException;
+import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
+import java.security.MessageDigest;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -46,6 +59,8 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
     @BindView(R.id.main_startSwitch) Switch startSwitch;
     @BindView(R.id.main_cameraSwitch) Switch cameraSwitch;
     @BindView(R.id.main_viewerCount) TextView viewerCountTextView;
+    @BindView(R.id.main_sendButton) ImageButton sendButton;
+    @BindView(R.id.main_messageInput) EditText messageEditText;
 
     private static final String TAG = MainActivity.class.getSimpleName();
     private Socket socket;
@@ -57,6 +72,13 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
     private RecyclerView.Adapter messageAdapter;
     private String URL;
     private RtspCamera2 rtspCamera2;
+    private String cerftificateName;
+
+    private String userMsg;
+
+    private String streamID;
+
+    private PrivateKey privateKey;
 
     private static final int CAMERA_REQUEST_CODE = 1888;
     private static final int REQUEST_LOGIN = 0;
@@ -68,19 +90,68 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         ButterKnife.bind(this);
         messageAdapter = new MessageAdapter(getApplicationContext(), messages);
 
-        try {
+        String chatId = "5b20e0d7e7179a589280ca7f";
+        String signedChatId = "";
 
+
+        try {
+            privateKey = loadPrivateKey(getIntent().getStringExtra("privateKey"));
+            username = getIntent().getStringExtra("userName").toString();
+            cerftificateName = getIntent().getStringExtra("certificateName");
+
+            Log.i(TAG, "onCreate: CERTIFICATE" + cerftificateName);
+
+            cerftificateName = cerftificateName.replace("Key", "Certificate");
+            Log.i(TAG, "onCreate: CERTIFICATE2" + cerftificateName);
+
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] data = chatId.getBytes();
+
+            Signature instance = Signature.getInstance("SHA256withRSA");
+            instance.initSign(privateKey);
+            instance.update(data);
+            byte[] signatureBytes = instance.sign();
+
+            StringBuilder sb = new StringBuilder();
+            for (int i=0; i<signatureBytes.length; i++) {
+                sb.append(String.format("%02X ",signatureBytes[i]));
+            }
+
+            signedChatId = sb.toString();
+            signedChatId =  signedChatId.replace(" ", "");
+
+            signedChatId = signedChatId.toLowerCase();
+
+
+
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
+        //User name
+        //Certificate
+        //Stream signed
+        //Stream unsigner
+
+
+        try {
 
             String url = "http://back3ndb0is.herokuapp.com/chat/socket?";
 
             IO.Options mOptions = new IO.Options();
-            mOptions.query = "stream=" + "5b20e0d7e7179a589280ca7f";
-            socket = IO.socket(url, mOptions);
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
+            mOptions.query = "stream=" + "5b20e0d7e7179a589280ca7f" + "&signature=" + signedChatId + "&userkey=" + cerftificateName + "&username=" + username;
 
-        connectSocket();
+
+            Log.i(TAG, "onCreate: " + mOptions.toString());
+
+                socket = IO.socket(url, mOptions);
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+
+            connectSocket();
+
+
 
         //surfaceView.setKeepAspectRatio(true);
 
@@ -125,7 +196,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                     Toast.makeText(MainActivity.this, "Turned stream on", Toast.LENGTH_SHORT).show();
                     if (!rtspCamera2.isStreaming()) {
                         if (rtspCamera2.isRecording() || rtspCamera2.prepareAudio()) {
-                            rtspCamera2.prepareVideo(1920, 1080, 60, 1228800, false, 90);
+                            rtspCamera2.prepareVideo(480, 320, 30, 1228800, false, 90);
 
                             Log.i("test", "onCheckedChanged: STARTING STREAM");
                             rtspCamera2.startStream(URL);
@@ -150,6 +221,13 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 } catch (CameraOpenException e) {
                     Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
+            }
+        });
+
+        sendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                attemptSend();
             }
         });
 
@@ -359,14 +437,15 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 public void run() {
                     JSONObject data = (JSONObject) args[0];
                     JSONObject user;
+                    String userMsg;
                     String message;
 
                     Log.i(TAG, "run: MESSAGEGET");
                     
                     try {
                         user = data.getJSONObject("User");
-                        username = user.getString("Name");
-                        username += ": ";
+                        userMsg = user.getString("Name");
+                        userMsg += ": ";
                         message = data.getString("Content");
                         Log.i(TAG, "run: " + message);
                     } catch (JSONException e) {
@@ -375,7 +454,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                     }
 
                     //removeTyping(username);
-                    addMessage(username, message);
+                    addMessage(userMsg, message);
                 }
             });
         }
@@ -388,7 +467,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 @Override
                 public void run() {
                     JSONObject data = (JSONObject) args[0];
-                    String username;
+                    String userMsg;
                     int numUsers = 0;
 
                     try {
@@ -414,7 +493,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 public void run() {
                     JSONObject data = (JSONObject) args[0];
                     int viewers;
-                    String username;
+                    String userMsg;
                     int numUsers = 0;
 
                     Log.i(TAG, "run: " + data.toString());
@@ -444,16 +523,16 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 @Override
                 public void run() {
                     JSONObject data = (JSONObject) args[0];
-                    String username;
+                    String userMsg;
 
                     try {
-                        username = data.getString("username");
+                        userMsg = data.getString("username");
                     } catch (JSONException e) {
                         Log.e(TAG, e.getMessage());
                         return;
                     }
 
-                    addTyping(username);
+                    addTyping(userMsg);
                 }
             });
         }
@@ -466,16 +545,16 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
                 @Override
                 public void run() {
                     JSONObject data = (JSONObject) args[0];
-                    String username;
+                    String userMsg;
 
                     try {
-                        username = data.getString("username");
+                        userMsg = data.getString("username");
                     } catch (JSONException e) {
                         Log.e(TAG, e.getMessage());
                         return;
                     }
 
-                    removeTyping(username);
+                    removeTyping(userMsg);
                 }
             });
         }
@@ -514,7 +593,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
     }
 
     private void addTyping(String username) {
-        messages.add(new Message.Builder(Message.TYPE_ACTION).username(username).build());
+        messages.add(new Message.Builder(Message.TYPE_ACTION).username(userMsg).build());
         messageAdapter.notifyItemInserted(messages.size() - 1);
         scrollToBottom();
     }
@@ -523,7 +602,7 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         for (int i = messages.size() - 1; i >= 0; i--) {
             Message message = messages.get(i);
 
-            if (message.getType() == Message.TYPE_ACTION && message.getUsername().equals(username)) {
+            if (message.getType() == Message.TYPE_ACTION && message.getUsername().equals(userMsg)) {
                 messages.remove(i);
                 messageAdapter.notifyItemRemoved(i);
             }
@@ -538,5 +617,84 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
 
     private void scrollToBottom() {
         messagesView.scrollToPosition(messageAdapter.getItemCount() - 1);
+    }
+
+
+    public static PrivateKey loadPrivateKey(String stored) throws GeneralSecurityException, IOException
+    {
+        byte [] pkcs8EncodedBytes = android.util.Base64.decode(stored, android.util.Base64.DEFAULT);
+
+        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(pkcs8EncodedBytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        PrivateKey privKey = kf.generatePrivate(keySpec);
+
+        return privKey;
+    }
+
+    private void attemptSend() {
+         if (null == username)
+                 return;
+
+         if (!socket.connected())
+                 return;
+
+         try {
+             //socket.disconnect();
+             //socket = IO.socket("http://back3ndb0is.herokuapp.com/chat/socket");
+             //connectSocket();
+         } catch(Exception e){
+             e.printStackTrace();
+         }
+
+        String message = messageEditText.getText().toString().trim();
+
+        if (TextUtils.isEmpty(message)) {
+            messageEditText.requestFocus();
+            return;
+        }
+
+        messageEditText.setText("");
+
+        JSONObject packet = new JSONObject();
+
+        String signedPacket = "";
+
+        String streamID = "5b20e0d7e7179a589280ca7f";
+
+        try {
+            packet.put("content", message);
+            packet.put("username", username);
+            packet.put("stream", streamID);
+            packet.put("userkey", cerftificateName);
+
+            byte[] data = packet.toString().getBytes();
+
+            Signature instance = Signature.getInstance("SHA256withRSA");
+            instance.initSign(privateKey);
+            instance.update(data);
+            byte[] signatureBytes = instance.sign();
+
+            StringBuilder sb = new StringBuilder();
+            for (int i=0; i<signatureBytes.length; i++) {
+                sb.append(String.format("%02X ",signatureBytes[i]));
+            }
+
+            signedPacket = sb.toString();
+            signedPacket =  signedPacket.replace(" ", "");
+
+            signedPacket = signedPacket.toLowerCase();
+
+            packet.put("signature", signedPacket);
+
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
+
+        Log.i(TAG, "attemptSend: " + packet);
+
+        socket.emit("MESSAGE_SEND", packet);
+
+        //socket.emit("MESSAGE_SEND", packet);
     }
 }

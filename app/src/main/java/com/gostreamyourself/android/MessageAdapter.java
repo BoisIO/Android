@@ -62,6 +62,8 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
         ViewHolder(View view) {
             super(view);
             ButterKnife.bind(this, view);
+
+
         }
 
         public void setUsername(String username) {
