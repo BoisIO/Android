@@ -568,30 +568,6 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         }
     }
 
-    private void attemptSend() {
-        if (null == username) {
-            return;
-        }
-
-        if (!socket.connected()) {
-            return;
-        }
-
-        //typing = false;
-
-        String message = messageEditText.getText().toString().trim();
-
-        if (TextUtils.isEmpty(message)) {
-            messageEditText.requestFocus();
-            return;
-        }
-
-        messageEditText.setText("");
-        addMessage(username, message);
-
-        // perform the sending message attempt.
-        socket.emit("MESSAGE_SEND", message);
-    }
 
 
     private void startSignIn() {

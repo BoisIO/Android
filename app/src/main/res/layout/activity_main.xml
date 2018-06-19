@@ -7,7 +7,6 @@
     tools:context="com.gostreamyourself.android.MainActivity">
 
 
-
     <com.pedro.rtplibrary.view.OpenGlView
         android:id="@+id/main_surfaceView"
         android:layout_width="match_parent"
@@ -47,55 +46,34 @@
     <android.support.v7.widget.RecyclerView
         android:id="@+id/main_recycler"
         android:layout_width="match_parent"
-<<<<<<< HEAD
         android:layout_above="@id/sendMessageLayout"
         android:layout_height="250dp"/>
 
     <LinearLayout
         android:id="@+id/sendMessageLayout"
-=======
-        android:layout_height="200dp"
-        android:layout_alignParentBottom="true"
-        android:layout_marginBottom="50dp" />
-
-    <LinearLayout
->>>>>>> f4789a68407e739d2995b73ebb40a4c74000bfd9
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true"
-<<<<<<< HEAD
-=======
         android:gravity="center_vertical"
->>>>>>> f4789a68407e739d2995b73ebb40a4c74000bfd9
         android:orientation="horizontal">
 
         <EditText
             android:id="@+id/main_messageInput"
             android:layout_width="0dp"
-<<<<<<< HEAD
             android:layout_height="match_parent"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="8dp"
             android:layout_weight="1"
-=======
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:hint="@string/prompt_message"
-            android:imeActionId="@+id/send"
->>>>>>> f4789a68407e739d2995b73ebb40a4c74000bfd9
             android:imeActionLabel="@string/action_send"
             android:imeOptions="actionSend"
             android:inputType="text"
             android:maxLines="1"
-<<<<<<< HEAD
             android:paddingLeft="5dp"
-            android:singleLine="true"
             android:background="@drawable/rounded_rectangle_white"
-            android:layout_gravity="center_vertical"/>
-=======
+            android:layout_gravity="center_vertical"
             android:singleLine="true" />
->>>>>>> f4789a68407e739d2995b73ebb40a4c74000bfd9
 
         <ImageButton
             android:id="@+id/main_sendButton"
