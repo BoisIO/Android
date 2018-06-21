@@ -62,6 +62,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -266,24 +267,32 @@ public class LoginActivity extends AppCompatActivity {
                             try {
                                 String transparantID = response.getString("_id");
                                 String username = response.getString("Name");
+                                boolean isTransparant = response.getBoolean("Transparant");
 
-                                Log.i(TAG, "onResponse: " + response.getJSONArray("Streams").toString());
+                                Log.i(TAG, "onResponseIS TRANSPARANT?: " + isTransparant);
 
-                                JSONArray streams = response.getJSONArray("Streams");
+                                if(isTransparant) {
+
+                                    Log.i(TAG, "onResponse: " + response.getJSONArray("Streams").toString());
+
+                                    JSONArray streams = response.getJSONArray("Streams");
 
 
+                                    String chatID = streams.getJSONObject(0).getString("_id");
 
-                                String chatID = streams.getJSONObject(0).getString("_id");
+                                    Intent gotoMain = new Intent(LoginActivity.this, MainActivity.class);
+                                    gotoMain.putExtra("userName", username);
+                                    gotoMain.putExtra("certificateName", fileName);
+                                    gotoMain.putExtra("streamID", transparantID);
+                                    gotoMain.putExtra("chatID", chatID);
+                                    gotoMain.putExtra("privateKey", privKeyPEM);
 
-                                Intent gotoMain = new Intent(LoginActivity.this, MainActivity.class);
-                                gotoMain.putExtra("userName", username);
-                                gotoMain.putExtra("certificateName", fileName);
-                                gotoMain.putExtra("streamID", transparantID);
-                                gotoMain.putExtra("chatID", chatID);
-                                gotoMain.putExtra("privateKey", privKeyPEM);
-
-                                startActivity(gotoMain);
-                                finish();
+                                    startActivity(gotoMain);
+                                    finish();
+                                } else{
+                                    disableLoadScreen();
+                                    errorTxt.setText("You are not a transparant user!");
+                                }
 
 
                             } catch (Exception e){
