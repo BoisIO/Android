@@ -401,7 +401,4 @@ public class LoginActivity extends AppCompatActivity {
         loginBtn.setVisibility(View.VISIBLE);
         userTxt.setVisibility(View.VISIBLE);
     }
-
-
-
 }
