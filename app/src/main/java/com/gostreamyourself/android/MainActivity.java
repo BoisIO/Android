@@ -449,37 +449,6 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         }
     };
 
-    private Emitter.Listener onUserLeft = new Emitter.Listener() {
-        @Override
-        public void call(final Object... args) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    JSONObject data = (JSONObject) args[0];
-                    int viewers;
-                    String userMsg;
-                    int numUsers = 0;
-
-                    Log.i(TAG, "run: " + data.toString());
-
-                    try {
-                        //username = data.getString("username");
-                        viewers = data.getInt(chatID);
-                        Log.i(TAG, "run: " + String.valueOf(viewers));
-                        //numUsers = viewers.get()
-                    } catch (JSONException e) {
-                        Log.e(TAG, e.getMessage());
-                        return;
-                    }
-
-                    //addLog(getResources().getString(R.string.message_user_left, username));
-                    viewerCountTextView.setText(String.valueOf(viewers));
-                    //removeTyping(username);
-                }
-            });
-        }
-    };
-
     private Emitter.Listener onTyping = new Emitter.Listener() {
         @Override
         public void call(final Object... args) {
@@ -572,8 +541,6 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         }
     }
 
-
-
     private void startSignIn() {
         username = null;
         Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
@@ -665,7 +632,5 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRts
         Log.i(TAG, "attemptSend: " + packet);
 
         socket.emit("MESSAGE_SEND", packet);
-
-        //socket.emit("MESSAGE_SEND", packet);
     }
 }
