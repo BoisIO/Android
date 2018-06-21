@@ -3,7 +3,6 @@ package com.gostreamyourself.android;
 import android.app.Activity;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import org.junit.Before;
@@ -21,12 +20,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.security.GeneralSecurityException;
 
-import butterknife.BindView;
-import butterknife.ButterKnife;
-
-import static org.hamcrest.Matchers.isEmptyString;
 import static org.junit.Assert.*;
-import static org.hamcrest.CoreMatchers.*;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(constants = BuildConfig.class, sdk = 23)
